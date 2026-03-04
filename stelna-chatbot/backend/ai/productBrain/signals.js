@@ -5,6 +5,9 @@
 
 function createSignals() {
   return {
+    // High-level product understanding (managed by productUnderstandingEngine)
+    productUnderstanding: null,
+
     productOverview: null,
     productionQuantity: null,
 
