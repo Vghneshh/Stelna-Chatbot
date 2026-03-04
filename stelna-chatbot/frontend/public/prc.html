@@ -351,14 +351,14 @@ const functional = {
 
 const nonfunctional = {
   group: "nonfunctional",
-  headers: ["Requirement","Defined?","Validated?","Risk Level"],
+  headers: ["Requirement","Target Specification","Defined?","Validated?","Risk Level"],
   rows: [
-    ["Weight", trueFalse("nonfunctional_weight_defined"), trueFalse("nonfunctional_weight_validated"), risk("nonfunctional_weight_risk")],
-    ["Durability", trueFalse("nonfunctional_durability_defined"), trueFalse("nonfunctional_durability_validated"), risk("nonfunctional_durability_risk")],
-    ["Safety", trueFalse("nonfunctional_safety_defined"), trueFalse("nonfunctional_safety_validated"), risk("nonfunctional_safety_risk")],
-    ["Compliance", trueFalse("nonfunctional_compliance_defined"), trueFalse("nonfunctional_compliance_validated"), risk("nonfunctional_compliance_risk")],
-    ["Aesthetics", trueFalse("nonfunctional_aesthetics_defined"), trueFalse("nonfunctional_aesthetics_validated"), risk("nonfunctional_aesthetics_risk")],
-    ["Usage Environment", yesNo("nonfunctional_environment_defined"), trueFalse("nonfunctional_environment_validated"), risk("nonfunctional_environment_risk")]
+    ["Weight", textArea("< 1 kg"), textArea("e.g. < 200g", "nonfunctional_weight_target"), trueFalse("nonfunctional_weight_defined"), trueFalse("nonfunctional_weight_validated"), risk("nonfunctional_weight_risk")],
+    ["Durability", textArea("Drop-proof & waterproof"), textArea("e.g. drop protection up to 1.5m", "nonfunctional_durability_target"), trueFalse("nonfunctional_durability_defined"), trueFalse("nonfunctional_durability_validated"), risk("nonfunctional_durability_risk")],
+    ["Safety", textArea("Non-toxic materials"), textArea("e.g. skin-safe / non-toxic", "nonfunctional_safety_target"), trueFalse("nonfunctional_safety_defined"), trueFalse("nonfunctional_safety_validated"), risk("nonfunctional_safety_risk")],
+    ["Compliance", textArea("IEC / CE"), textArea("e.g. CE / IEC", "nonfunctional_compliance_target"), trueFalse("nonfunctional_compliance_defined"), trueFalse("nonfunctional_compliance_validated"), risk("nonfunctional_compliance_risk")],
+    ["Aesthetics", textArea("Rugged outdoor look"), textArea("e.g. premium modern design", "nonfunctional_aesthetics_target"), trueFalse("nonfunctional_aesthetics_defined"), trueFalse("nonfunctional_aesthetics_validated"), risk("nonfunctional_aesthetics_risk")],
+    ["Usage Environment", textArea("Indoor / Outdoor"), textArea("e.g. indoor and outdoor", "nonfunctional_usage_environment"), yesNo("nonfunctional_environment_defined"), trueFalse("nonfunctional_environment_validated"), risk("nonfunctional_environment_risk")]
   ]
 };
 
@@ -374,7 +374,9 @@ const manufacturing = {
     ["Critical Parts Identified", trueFalse("manufacturing_critical_status"), trueFalse("manufacturing_critical_vendor"), trueFalse("manufacturing_critical_cost"), confidence("manufacturing_critical_confidence")],
     ["OTS vs Custom Parts Known", trueFalse("manufacturing_ots_status"), trueFalse("manufacturing_ots_vendor"), trueFalse("manufacturing_ots_cost"), confidence("manufacturing_ots_confidence")],
     ["Rough Cost Awareness", trueFalse("manufacturing_cost_status"), trueFalse("manufacturing_cost_vendor"), trueFalse("manufacturing_cost_cost"), confidence("manufacturing_cost_confidence")],
-    ["Basic Feasibility Proven", trueFalse("manufacturing_feasibility_status"), trueFalse("manufacturing_feasibility_vendor"), trueFalse("manufacturing_feasibility_cost"), confidence("manufacturing_feasibility_confidence")]
+    ["Basic Feasibility Proven", trueFalse("manufacturing_feasibility_status"), trueFalse("manufacturing_feasibility_vendor"), trueFalse("manufacturing_feasibility_cost"), confidence("manufacturing_feasibility_confidence")],
+    ["Production Quantity (First Batch)", textArea("e.g. 500 units", "manufacturing_production_quantity"), "", "", ""],
+    ["Target Cost Per Unit", textArea("e.g. $4.50", "manufacturing_cost_target"), "", "", ""]
   ]
 };
 
@@ -461,124 +463,17 @@ document.getElementById("tables").innerHTML =
   renderTable("Non-Functional Requirements", nonfunctional) +
   renderTable("Manufacturing Readiness", manufacturing);
 
-// ===== Map chatbot answers to PRC form fields =====
-function mapChatbotAnswersToPRC(answers) {
-  const mapped = {};
-  
-  // Helper to check if answer contains yes/positive indicators
-  const isPositive = (text) => {
-    if (!text) return false;
-    const positive = ["yes", "have", "done", "created", "designed", "identified", "aware", "know", "familiar"];
-    return positive.some(word => text.toLowerCase().includes(word));
-  };
-  
-  // Q1: Product description
-  if (answers.q1) {
-    mapped.functional_core_example = answers.q1;
-    mapped.knowledge_problem = isPositive(answers.q1) ? "Know Enough" : "Know Partially";
-    mapped.knowledge_user = isPositive(answers.q1) ? "Know Enough" : "Know Partially";
-  }
-  
-  // Q2: Core functionality & design
-  if (answers.q2) {
-    mapped.knowledge_science = isPositive(answers.q2) ? "Know Enough" : "Know Partially";
-    mapped.knowledge_design = isPositive(answers.q2) ? "Know Enough" : "Know Partially";
-    mapped.functional_core_design = isPositive(answers.q2) ? "1" : "0";
-    mapped.functional_core_design = isPositive(answers.q2) ? "1" : "0";
-  }
-  
-  // Q3: Prototyping & materials
-  if (answers.q3) {
-    mapped.knowledge_materials = isPositive(answers.q3) ? "Know Enough" : "Know Partially";
-    mapped.knowledge_mfg = isPositive(answers.q3) ? "Know Enough" : "Know Partially";
-    mapped.manufacturing_prototype_status = isPositive(answers.q3) ? "1" : "0";
-  }
-  
-  // Q4: Testing & validation
-  if (answers.q4) {
-    mapped.knowledge_testing = isPositive(answers.q4) ? "Know Enough" : "Know Partially";
-    mapped.functional_core_tested = isPositive(answers.q4) ? "1" : "0";
-    mapped.nonfunctional_durability_defined = isPositive(answers.q4) ? "1" : "0";
-    mapped.nonfunctional_safety_defined = isPositive(answers.q4) ? "1" : "0";
-  }
-  
-  // Q5: Manufacturing & cost
-  if (answers.q5) {
-    mapped.knowledge_mfg = isPositive(answers.q5) ? "Know Enough" : "Know Partially";
-    mapped.manufacturing_process_status = isPositive(answers.q5) ? "1" : "0";
-    mapped.manufacturing_cost_status = isPositive(answers.q5) ? "1" : "0";
-  }
-  
-  // Q6: Materials & tolerances
-  if (answers.q6) {
-    mapped.knowledge_materials = isPositive(answers.q6) ? "Know Enough" : "Know Partially";
-    mapped.manufacturing_material_status = isPositive(answers.q6) ? "1" : "0";
-    mapped.manufacturing_tolerances_status = isPositive(answers.q6) ? "1" : "0";
-    mapped.nonfunctional_durability_defined = isPositive(answers.q6) ? "1" : "0";
-  }
-  
-  // Q7: Target specs & aesthetics
-  if (answers.q7) {
-    mapped.knowledge_specs = isPositive(answers.q7) ? "Know Enough" : "Know Partially";
-    mapped.nonfunctional_weight_defined = isPositive(answers.q7) ? "1" : "0";
-    mapped.nonfunctional_compliance_defined = isPositive(answers.q7) ? "1" : "0";
-  }
-  
-  // Q8: Electronics & components
-  if (answers.q8) {
-    mapped.knowledge_electronics = isPositive(answers.q8) ? "Know Enough" : "Know Partially";
-    mapped.knowledge_components = isPositive(answers.q8) ? "Know Enough" : "Know Partially";
-    mapped.manufacturing_critical_status = isPositive(answers.q8) ? "1" : "0";
-  }
-  
-  // Q9: Regulatory & compliance
-  if (answers.q9) {
-    mapped.knowledge_compliance = isPositive(answers.q9) ? "Know Enough" : "Know Partially";
-    mapped.nonfunctional_compliance_defined = isPositive(answers.q9) ? "1" : "0";
-  }
-  
-  // Q10: Assembly & manufacturing
-  if (answers.q10) {
-    mapped.knowledge_mfg = isPositive(answers.q10) ? "Know Enough" : "Know Partially";
-    mapped.manufacturing_assembly_status = isPositive(answers.q10) ? "1" : "0";
-    mapped.manufacturing_critical_status = isPositive(answers.q10) ? "1" : "0";
-  }
-  
-  // Q11: Knowledge gaps & expert needs
-  if (answers.q11) {
-    const needsHelp = answers.q11.toLowerCase().includes("expert") || answers.q11.toLowerCase().includes("help") || answers.q11.toLowerCase().includes("outsourc");
-    if (needsHelp) {
-      mapped.knowledge_design_expert = "1";
-      mapped.knowledge_mfg_expert = "1";
-      mapped.knowledge_electronics_expert = "1";
-      mapped.knowledge_components_expert = "1";
-      mapped.knowledge_testing_expert = "1";
-    }
-  }
-  
-  // Q12: Business & market readiness
-  if (answers.q12) {
-    mapped.knowledge_planning = isPositive(answers.q12) ? "Know Enough" : "Know Partially";
-  }
-  
-  return mapped;
-}
-
 // ===== Auto-fill from chatbot AFTER DOM is ready =====
 setTimeout(() => {
   console.log("🔄 Auto-filling PRC with chatbot answers...");
   console.log("📊 Chatbot answers:", chatbotAnswers);
   
-  // Map chatbot answers to PRC fields
-  const mappedAnswers = mapChatbotAnswersToPRC(chatbotAnswers);
-  console.log("📋 Mapped PRC fields:", mappedAnswers);
-  
   let filledCount = 0;
-  for (const id in mappedAnswers) {
+  for (const id in chatbotAnswers) {
     const el = document.getElementById(id);
     if (el) {
       const oldValue = el.value;
-      let newValue = mappedAnswers[id];
+      let newValue = chatbotAnswers[id];
       
       // Convert backend values to dropdown values (1/0)
       if (newValue === true || newValue === "TRUE" || newValue === "true" || newValue === "yes" || newValue === "YES") {
@@ -590,7 +485,7 @@ setTimeout(() => {
       }
       
       el.value = newValue;
-      console.log(`   ✓ Filled ${id}: "${oldValue}" → "${newValue}"`);
+      console.log(`   ✓ Filled ${id}: "${oldValue}" → "${newValue}" (original: "${chatbotAnswers[id]}")`);
       
       // If this is a knowledge field, auto-set the expert field
       if (id.startsWith("knowledge_") && !id.endsWith("_expert") && id !== "knowledge_support") {
