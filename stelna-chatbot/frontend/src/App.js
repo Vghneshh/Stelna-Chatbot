@@ -120,24 +120,21 @@ How can I help you today?`,
         sessionId: sessionId
       });
 
-      // Extract bot message (priority: message > reply)
-      const botMessage = res.data.message || res.data.reply || "Got it!";
-
       // Handle different response types
       if (res.data.type === "menu") {
-        addBotMessage(botMessage, res.data.options);
+        addBotMessage(res.data.message, res.data.options);
       }
       else if (res.data.type === "prc_start" || res.data.type === "prc_question") {
         // PRC conversation flow
-        addBotMessage(botMessage, res.data.options);
+        addBotMessage(res.data.message, res.data.options);
       }
       else if (res.data.type === "prc_complete") {
         // PRC completed - ask if user wants to review
-        addBotMessage(botMessage, res.data.options);
+        addBotMessage(res.data.message, res.data.options);
       }
       else if (res.data.type === "prc_redirect" || (res.data.reply === "__PRC_REDIRECT__" && res.data.prcUrl)) {
         // Redirect to PRC with collected answers
-        addBotMessage(botMessage || "Great! Let me take you to the Product Readiness Checklist...");
+        addBotMessage(res.data.message || "Great! Let me take you to the Product Readiness Checklist...");
         if (res.data.prcAnswers) {
           localStorage.setItem("prcAnswers", JSON.stringify(res.data.prcAnswers));
         }
@@ -147,7 +144,7 @@ How can I help you today?`,
         }, 1000);
       }
       else {
-        addBotMessage(botMessage);
+        addBotMessage(res.data.reply || res.data.message);
       }
 
     } catch (error) {
