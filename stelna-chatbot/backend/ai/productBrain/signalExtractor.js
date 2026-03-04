@@ -1,74 +1,62 @@
 /**
  * Signal Extractor
- * Extracts product entities and signals from user answers
+ * Listens to chatbot answers and updates session signals
  */
 
-const llmService = require("../../services/llmService");
+const { generateLLMResponse } = require("../../services/llmService");
 
 /**
- * Extract the product name from user input
- * Prevents bot from echoing the full sentence
+ * Extract core product signals (product, user, problem, domain) from first answer
+ * This is used for Q1 to intelligently extract all product metadata at once
  */
-async function extractProduct(answer) {
-  try {
-    const prompt = `
-Extract the product being described.
+async function extractProductSignals(answer) {
+  const prompt = `
+Extract structured product signals from the user's message.
 
-User input:
-${answer}
+User message:
+"${answer}"
 
-Return ONLY the product name in 3-5 words.
+Return ONLY valid JSON with these fields if present:
 
-Example:
-Input: "I want to manufacture a smart water bottle"
-Output: "smart water bottle"
-`;
-
-    const result = await llmService.generateLLMResponse(prompt);
-    return result.trim();
-  } catch (error) {
-    // If LLM fails, use fallback extraction
-    console.log(`⚠️  Product extraction failed: ${error.message}, using fallback...`);
-    return fallbackExtractProduct(answer);
-  }
+{
+  "product": "",
+  "user": "",
+  "problem": "",
+  "domain": ""
 }
 
-/**
- * Fallback product extraction using regex
- * Extracts nouns and adjectives from the answer
- */
-function fallbackExtractProduct(answer) {
-  // Common product-related words
-  const productKeywords = [
-    'bottle', 'device', 'app', 'system', 'tool', 'product', 'solution',
-    'sensor', 'tracker', 'monitor', 'watch', 'plate', 'cup', 'bag',
-    'shoes', 'clothing', 'gloves', 'helmet', 'case', 'cover', 'stand'
-  ];
-  
-  const words = answer.toLowerCase().split(/\s+/);
-  let product = [];
-  
-  // Look for product keywords and adjacent descriptive words
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i].replace(/[.,!?]/g, '');
-    
-    if (productKeywords.includes(word)) {
-      // Get previous descriptive word if exists
-      if (i > 0 && !['a', 'an', 'the', 'for', 'that', 'which'].includes(words[i-1])) {
-        product.push(words[i-1]);
-      }
-      product.push(word);
-      break;
+Rules:
+- product = the main product/device being built (be specific: "smart water bottle", not just "device")
+- user = target user/customer (elderly people, athletes, students, etc.)
+- problem = the problem it solves (hydration reminder, performance tracking, etc.)
+- domain = product category (IoT, medical, wearable, consumer electronics, health, smart home, etc.)
+
+Be concise. If a field is not mentioned, set it to empty string "".
+Return ONLY the JSON object, no other text.
+`;
+
+  try {
+    const response = await generateLLMResponse([
+      { role: "system", content: "You extract structured product signals. Return only valid JSON." },
+      { role: "user", content: prompt }
+    ]);
+
+    // Clean response - remove markdown code blocks if present
+    let cleanedResponse = response.trim();
+    if (cleanedResponse.startsWith("```json")) {
+      cleanedResponse = cleanedResponse.replace(/^```json\n?/, "").replace(/\n?```$/, "");
+    } else if (cleanedResponse.startsWith("```")) {
+      cleanedResponse = cleanedResponse.replace(/^```\n?/, "").replace(/\n?```$/, "");
     }
+
+    const parsed = JSON.parse(cleanedResponse);
+    
+    console.log("🔍 Product signal extraction result:", parsed);
+    return parsed;
+  } catch (err) {
+    console.error("❌ Product signal extraction failed:", err.message);
+    return { product: "", user: "", problem: "", domain: "" };
   }
-  
-  // If no product keyword found, use first 3 meaningful words
-  if (product.length === 0) {
-    const meaningful = words.filter(w => w.length > 3 && !['that', 'which', 'when', 'what'].includes(w));
-    product = meaningful.slice(0, 3);
-  }
-  
-  return product.length > 0 ? product.join(' ') : answer.substring(0, 50);
 }
 
 /**
@@ -817,7 +805,6 @@ async function extractSignals(sessionSignals, questionId, answer) {
   console.log(`📊 Signal extracted from ${questionId}:`, sessionSignals);
 }
 
-module.exports = {
-  extractProduct,
-  extractSignals
-};
+module.exports = extractSignals;
+module.exports.extractProductSignals = extractProductSignals;
+module.exports.interpretBinary = interpretBinary;
