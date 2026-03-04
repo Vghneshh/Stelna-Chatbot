@@ -111,8 +111,89 @@ body {
   border-top: 1px solid #ddd;
 }
 
+.quick-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 10px 0 10px;
+  border-top: 1px solid #eee;
+}
+
+.quick-option-btn {
+  background: #eef4ff;
+  color: #1f4fa8;
+  border: 1px solid #cfe0ff;
+  border-radius: 16px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.quick-option-btn:hover {
+  background: #dfeeff;
+}
+
+.quick-option-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.quick-action-btn {
+  background: white;
+  color: #1f4fa8;
+  border: 2px solid #1f4fa8;
+  border-radius: 20px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-action-btn:hover {
+  background: #1f4fa8;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(31, 79, 168, 0.3);
+}
+
+.quick-action-btn:active {
+  transform: translateY(0);
+}
+
+.quick-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .app.dark .chat-input {
   border-top-color: #404040;
+}
+
+.app.dark .quick-options {
+  border-top-color: #374151;
+}
+
+.app.dark .quick-option-btn {
+  background: #1f2937;
+  color: #dbeafe;
+  border-color: #374151;
+}
+
+.app.dark .quick-option-btn:hover {
+  background: #111827;
+}
+
+.app.dark .quick-action-btn {
+  background: #1f2937;
+  color: #93c5fd;
+  border-color: #93c5fd;
+}
+
+.app.dark .quick-action-btn:hover {
+  background: #93c5fd;
+  color: #1f2937;
+  box-shadow: 0 4px 12px rgba(147, 197, 253, 0.3);
 }
 
 .chat-input input {
@@ -195,6 +276,50 @@ body {
 
 .msg.bot .time {
   text-align: left;
+}
+
+/* Menu Options / Quick Action Buttons */
+.menu-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.menu-btn {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 2px solid #1f6feb;
+  background: white;
+  color: #1f6feb;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.menu-btn:hover {
+  background: #1f6feb;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3);
+}
+
+.menu-btn:active {
+  transform: translateY(0);
+}
+
+.app.dark .menu-btn {
+  background: #1f2937;
+  color: #93c5fd;
+  border-color: #93c5fd;
+}
+
+.app.dark .menu-btn:hover {
+  background: #93c5fd;
+  color: #1f2937;
+  box-shadow: 0 4px 12px rgba(147, 197, 253, 0.3);
 }
 
 /* DARK MODE */

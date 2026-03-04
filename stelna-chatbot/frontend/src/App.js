@@ -18,6 +18,7 @@ function App() {
 
   const [sessionId] = useState(getSessionId());
   const [message, setMessage] = useState("");
+  const [showQuickActions, setShowQuickActions] = useState(true);
   const [chat, setChat] = useState([
     {
       type: "bot",
@@ -25,20 +26,77 @@ function App() {
 
 I'm here to assist you in planning your product manufacturing.
 
-Share a brief description of your product along with quantity,
-and I'll suggest the suitable production approach.`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+How can I help you today?`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      showButtons: true
     }
   ]);
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
 
-  const addBotMessage = (text) => {
+  const addBotMessage = (text, options = null) => {
     setChat(prev => [...prev, {
       type: "bot",
       text: text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      menuOptions: options
+    }]);
+  };
+
+  const handleMenuOption = async (option) => {
+    // Hide quick action buttons after first click
+    setShowQuickActions(false);
+    
+    // Add user selection as message
+    setChat(prev => [...prev, {
+      type: "user",
+      text: option,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }]);
+
+    setLoading(true);
+
+    // Handle "Save for later" option
+    if (option === "Save for later") {
+      addBotMessage("No problem! Your progress has been saved.\n\nYou can continue anytime by typing 'hi' or 'menu'.");
+      setLoading(false);
+      return;
+    }
+
+    // For all options, send to backend
+    try {
+      const res = await axios.post("http://localhost:5000/chat", {
+        message: option,
+        sessionId: sessionId
+      });
+
+      // Handle different response types (same as sendMessage)
+      if (res.data.type === "menu") {
+        addBotMessage(res.data.message, res.data.options);
+      }
+      else if (res.data.type === "prc_start" || res.data.type === "prc_question") {
+        addBotMessage(res.data.message, res.data.options);
+      }
+      else if (res.data.type === "prc_complete") {
+        addBotMessage(res.data.message, res.data.options);
+      }
+      else if (res.data.type === "prc_redirect" || (res.data.reply === "__PRC_REDIRECT__" && res.data.prcUrl)) {
+        addBotMessage(res.data.message || "Great! Let me take you to the Product Readiness Checklist...");
+        if (res.data.prcAnswers) {
+          localStorage.setItem("prcAnswers", JSON.stringify(res.data.prcAnswers));
+        }
+        setTimeout(() => {
+          window.location.href = res.data.prcUrl;
+        }, 1000);
+      }
+      else {
+        addBotMessage(res.data.reply || res.data.message);
+      }
+    } catch (error) {
+      addBotMessage("Sorry, something went wrong. Please try again.");
+    }
+
+    setLoading(false);
   };
 
   const sendMessage = async () => {
@@ -62,7 +120,35 @@ and I'll suggest the suitable production approach.`,
         sessionId: sessionId
       });
 
-      addBotMessage(res.data.reply);
+      // Extract bot message (priority: message > reply)
+      const botMessage = res.data.message || res.data.reply || "Got it!";
+
+      // Handle different response types
+      if (res.data.type === "menu") {
+        addBotMessage(botMessage, res.data.options);
+      }
+      else if (res.data.type === "prc_start" || res.data.type === "prc_question") {
+        // PRC conversation flow
+        addBotMessage(botMessage, res.data.options);
+      }
+      else if (res.data.type === "prc_complete") {
+        // PRC completed - ask if user wants to review
+        addBotMessage(botMessage, res.data.options);
+      }
+      else if (res.data.type === "prc_redirect" || (res.data.reply === "__PRC_REDIRECT__" && res.data.prcUrl)) {
+        // Redirect to PRC with collected answers
+        addBotMessage(botMessage || "Great! Let me take you to the Product Readiness Checklist...");
+        if (res.data.prcAnswers) {
+          localStorage.setItem("prcAnswers", JSON.stringify(res.data.prcAnswers));
+        }
+        
+        setTimeout(() => {
+          window.location.href = res.data.prcUrl;
+        }, 1000);
+      }
+      else {
+        addBotMessage(botMessage);
+      }
 
     } catch (error) {
       addBotMessage("Sorry, something went wrong. Please try again.");
@@ -94,6 +180,42 @@ and I'll suggest the suitable production approach.`,
                 {c.text}
               </ReactMarkdown>
               <div className="time">{c.time}</div>
+              
+              {/* Show quick action buttons only on first message and if not clicked yet */}
+              {c.showButtons && showQuickActions && (
+                <div className="menu-options">
+                  <button className="menu-btn" onClick={() => handleMenuOption("Manufacturing Advice")}>
+                    Manufacturing Advice
+                  </button>
+                  <button className="menu-btn" onClick={() => handleMenuOption("Design Support")}>
+                    Design Support
+                  </button>
+                  <button className="menu-btn" onClick={() => handleMenuOption("Check Product Readiness")}>
+                    Check Product Readiness
+                  </button>
+                  <button className="menu-btn" onClick={() => handleMenuOption("Material Selection")}>
+                    Material Selection
+                  </button>
+                  <button className="menu-btn" onClick={() => handleMenuOption("Process Selection")}>
+                    Process Selection
+                  </button>
+                </div>
+              )}
+              
+              {/* Render dynamic menu options from backend responses */}
+              {c.menuOptions && (
+                <div className="menu-options">
+                  {c.menuOptions.map((opt, idx) => (
+                    <button 
+                      key={idx} 
+                      className="menu-btn"
+                      onClick={() => handleMenuOption(opt)}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
 

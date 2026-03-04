@@ -55,12 +55,21 @@ app.post("/chat", async (req, res) => {
       return res.status(400).json({ reply: "Message required." });
     }
 
+    const lowerMessage = message.toLowerCase().trim();
+
+    if (lowerMessage.includes("check product readiness")) {
+      return res.json({
+        type: "prc_start",
+        message: "Great 👍 Let's understand your product readiness.\n\nI'll ask you 12 questions to assess where you are in your development journey.\n\n**Question 1:**\n\nWhat's your product? What problem are you solving?\n\n• Who is the user?\n• What domain does it belong to?"
+      });
+    }
+
     // Conversation Intent Layer - Detect Closure
     const closureWords = ["thanks", "thank you", "ok thank you", "ok thanks", "great thanks"];
 
     const isClosure =
       closureWords.some(word =>
-        message.toLowerCase().includes(word)
+        lowerMessage.includes(word)
       );
 
     if (isClosure) {
@@ -169,6 +178,13 @@ ${message}
 
   } catch (err) {
     console.error("CHAT ERROR:", err.message);
+
+    if (err?.response?.status === 429) {
+      return res.status(200).json({
+        reply: "I’m temporarily rate-limited right now. Please try again in a moment, or type 'Check Product Readiness' to continue with the guided checklist flow."
+      });
+    }
+
     return res.status(500).json({ reply: "Something went wrong." });
   }
 });

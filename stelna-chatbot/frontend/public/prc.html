@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Product Readiness Checklist</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    /* ================= HEADER ================= */
+
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .logo-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .logo-row img {
+      height: 48px;
+      object-fit: contain;
+    }
+
+    .page-header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .download-btn {
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    /* Desktop header */
+    @media screen and (min-width: 1025px) {
+      .page-header {
+        flex-direction: row;
+        justify-content: space-between;
+        text-align: left;
+      }
+
+      .logo-row {
+        width: auto;
+        gap: 20px;
+      }
+
+      .page-header h1 {
+        flex: 1;
+        text-align: center;
+      }
+    }
+
+    /* ================= LAYOUT ================= */
+
+    .layout {
+      display: flex;
+      gap: 20px;
+    }
+
+    .left { width: 65%; }
+    .right { width: 35%; }
+
+    /* ================= TABLES ================= */
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 40px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      font-size: 13px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f4f4f4;
+    }
+
+    select, textarea {
+      width: 100%;
+      font-size: 13px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 40px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    canvas {
+      margin-bottom: 40px;
+    }
+
+    /* ================= RESPONSIVE ================= */
+
+    @media screen and (max-width: 1024px) {
+      .layout {
+        flex-direction: column;
+      }
+
+      .left, .right {
+        width: 100%;
+      }
+    }
+
+    @media screen and (max-width: 480px) {
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+
+    /* ================= PRINT (PDF) ================= */
+
+    @media print {
+      .download-btn {
+        display: none;
+      }
+
+      .layout {
+        display: block;
+      }
+
+      .charts-page {
+        page-break-before: always;
+        width: 100%;
+        margin-top: 40px;
+      }
+
+      canvas {
+        max-width: 100% !important;
+      }
+    }
+
+    .prc-description {
+  margin-top: 16px;
+}
+
+.prc-description p {
+  font-size: 14px;
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.next-steps {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  text-align: center;
+}
+
+.next-steps h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.next-steps p {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.next-steps a {
+  color: #2563eb;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.next-steps a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (min-width: 640px) {
+  .next-steps {
+    padding: 2rem;
+  }
+  .next-steps h2 {
+    font-size: 1.75rem;
+  }
+  .next-steps p {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .next-steps {
+    padding: 2.5rem;
+  }
+  .next-steps h2 {
+    font-size: 2rem;
+  }
+  .next-steps p {
+    font-size: 1.25rem;
+  }
+}
+
+
+  </style>
+</head>
+
+<body>
+
+<!-- ================= HEADER ================= -->
+
+<div class="page-header">
+  <div class="logo-row">
+    <img src="https://static.wixstatic.com/media/44be1a_acffb25edd61401889672e9763e05af1~mv2.png " alt="Stelna Designs Logo">
+    <img src="https://bhuve.com/assets/bhuve-horizontal-logo-BG3Rtt8b.png" alt="Bhuve Logo">
+  </div>
+
+  <h1>Product Readiness Checklist</h1>
+
+  <button class="download-btn" onclick="downloadPDF()">Download Report</button>
+</div>
+<div class="prc-description">
+  <p><strong>Know if your product is ready</strong> before you build, spend, or scale.</p>
+  <p>Evaluate execution readiness across knowledge, requirements, and manufacturing.</p>
+  <p>Pie & bar charts instantly surface gaps and risks.</p>
+  <p>Create a clear, shareable readiness report for teams and stakeholders.</p>
+</div>
+
+<!-- ================= CONTENT ================= -->
+
+<div class="layout">
+  <div class="left" id="tables"></div>
+
+  <div class="right charts-page">
+    <canvas id="pie"></canvas>
+    <canvas id="bar"></canvas>
+  </div>
+</div>
+
+<script>
+// ===== Read chatbot answers from URL =====
+const params = new URLSearchParams(window.location.search);
+const answersParam = params.get("answers");
+
+let chatbotAnswers = {};
+
+if (answersParam) {
+  try {
+    chatbotAnswers = JSON.parse(decodeURIComponent(answersParam));
+  } catch (err) {
+    console.log("Invalid chatbot data");
+  }
+}
+
+if (!chatbotAnswers || Object.keys(chatbotAnswers).length === 0) {
+  try {
+    const savedAnswers = localStorage.getItem("prcAnswers");
+    if (savedAnswers) {
+      chatbotAnswers = JSON.parse(savedAnswers);
+      console.log("Loaded PRC answers from localStorage");
+    }
+  } catch (err) {
+    console.log("Invalid localStorage PRC data");
+  }
+}
+
+/* ================= DROPDOWNS ================= */
+
+const yesNo = (id) => `
+<select ${id ? `id="${id}"` : ''} onchange="recalculate()">
+  <option value="">--</option>
+  <option value="1">Yes</option>
+  <option value="0">No</option>
+</select>`;
+
+const trueFalse = (id) => `
+<select ${id ? `id="${id}"` : ''} onchange="recalculate()">
+  <option value="">--</option>
+  <option value="1">TRUE</option>
+  <option value="0">FALSE</option>
+</select>`;
+
+const featureType = (id) => `
+<select ${id ? `id="${id}"` : ''} onchange="recalculate()">
+  <option value="">--</option>
+  <option value="1">Core</option>
+  <option value="1">Secondary</option>
+  <option value="1">Optional</option>
+</select>`;
+
+const risk = (id) => `
+<select ${id ? `id="${id}"` : ''} onchange="recalculate()">
+  <option value="">--</option>
+  <option value="2">Low</option>
+  <option value="1">Medium</option>
+  <option value="0">High</option>
+</select>`;
+
+const confidence = (id) => `
+<select ${id ? `id="${id}"` : ''} onchange="recalculate()">
+  <option value="">--</option>
+  <option value="1">1</option>
+  <option value="2">2</option>
+  <option value="3">3</option>
+  <option value="4">4</option>
+  <option value="5">5</option>
+</select>`;
+
+const knowledgeLevel = (id) => `
+<select ${id ? `id="${id}"` : ''} onchange="handleKnowledgeChange('${id}'); recalculate()">
+  <option value="">--</option>
+  <option value="2">Know Enough</option>
+  <option value="1">Know Partially</option>
+  <option value="0">Don't Know</option>
+</select>`;
+
+const textArea = (ph, id) => `<textarea ${id ? `id="${id}"` : ''} placeholder="${ph}"></textarea>`;
+
+/* ================= DATA ================= */
+
+const functional = {
+  group: "functional",
+  headers: ["Feature","Example","Must Have","Feature Type","Understand Working?","Design Defined?","Tested?"],
+  rows: [
+    ["Core Functionality", textArea("Water filtration", "functional_core_example"), yesNo("functional_core_musthave"), featureType("functional_core_featureType"), trueFalse("functional_core_understanding"), trueFalse("functional_core_design"), trueFalse("functional_core_tested")],
+    ["Energy / Power", textArea("Battery or solar powered", "functional_energy_example"), yesNo("functional_energy_musthave"), featureType("functional_energy_featureType"), trueFalse("functional_energy_understanding"), trueFalse("functional_energy_design"), trueFalse("functional_energy_tested")],
+    ["Control & Logic", textArea("Automatic on/off", "functional_control_example"), yesNo("functional_control_musthave"), featureType("functional_control_featureType"), trueFalse("functional_control_understanding"), trueFalse("functional_control_design"), trueFalse("functional_control_tested")],
+    ["User Interaction", textArea("LED indicators", "functional_interaction_example"), yesNo("functional_interaction_musthave"), featureType("functional_interaction_featureType"), trueFalse("functional_interaction_understanding"), trueFalse("functional_interaction_design"), trueFalse("functional_interaction_tested")],
+    ["Environmental Protection", textArea("Waterproof & dust resistant", "functional_environment_example"), yesNo("functional_environment_musthave"), featureType("functional_environment_featureType"), trueFalse("functional_environment_understanding"), trueFalse("functional_environment_design"), trueFalse("functional_environment_tested")],
+    ["Mechanical Structure", textArea("Enclosure & mounting", "functional_mechanical_example"), yesNo("functional_mechanical_musthave"), featureType("functional_mechanical_featureType"), trueFalse("functional_mechanical_understanding"), trueFalse("functional_mechanical_design"), trueFalse("functional_mechanical_tested")],
+    ["Modularity", textArea("Replaceable filter cartridge", "functional_modularity_example"), yesNo("functional_modularity_musthave"), featureType("functional_modularity_featureType"), trueFalse("functional_modularity_understanding"), trueFalse("functional_modularity_design"), trueFalse("functional_modularity_tested")],
+    ["Maintenance", textArea("Tool-less replacement", "functional_maintenance_example"), yesNo("functional_maintenance_musthave"), featureType("functional_maintenance_featureType"), trueFalse("functional_maintenance_understanding"), trueFalse("functional_maintenance_design"), trueFalse("functional_maintenance_tested")],
+    ["Interfaces", textArea("USB-C charging", "functional_interfaces_example"), yesNo("functional_interfaces_musthave"), featureType("functional_interfaces_featureType"), trueFalse("functional_interfaces_understanding"), trueFalse("functional_interfaces_design"), trueFalse("functional_interfaces_tested")],
+    ["Optional Enhancements", textArea("Mobile app connectivity", "functional_optional_example"), yesNo("functional_optional_musthave"), featureType("functional_optional_featureType"), trueFalse("functional_optional_understanding"), trueFalse("functional_optional_design"), trueFalse("functional_optional_tested")]
+  ]
+};
+
+const nonfunctional = {
+  group: "nonfunctional",
+  headers: ["Requirement","Target","Defined?","Validated?","Risk Level"],
+  rows: [
+    ["Weight", textArea("e.g. < 200g", "nonfunctional_weight_target"), trueFalse("nonfunctional_weight_defined"), trueFalse("nonfunctional_weight_validated"), risk("nonfunctional_weight_risk")],
+    ["Durability", textArea("e.g. drop protection up to 1.5m", "nonfunctional_durability_target"), trueFalse("nonfunctional_durability_defined"), trueFalse("nonfunctional_durability_validated"), risk("nonfunctional_durability_risk")],
+    ["Safety", textArea("e.g. skin-safe / non-toxic", "nonfunctional_safety_target"), trueFalse("nonfunctional_safety_defined"), trueFalse("nonfunctional_safety_validated"), risk("nonfunctional_safety_risk")],
+    ["Compliance", textArea("e.g. CE / IEC", "nonfunctional_compliance_target"), trueFalse("nonfunctional_compliance_defined"), trueFalse("nonfunctional_compliance_validated"), risk("nonfunctional_compliance_risk")],
+    ["Aesthetics", textArea("e.g. premium modern design", "nonfunctional_aesthetics_target"), trueFalse("nonfunctional_aesthetics_defined"), trueFalse("nonfunctional_aesthetics_validated"), risk("nonfunctional_aesthetics_risk")],
+    ["Usage Environment", textArea("e.g. indoor and outdoor", "nonfunctional_usage_environment"), yesNo("nonfunctional_environment_defined"), trueFalse("nonfunctional_environment_validated"), risk("nonfunctional_environment_risk")]
+  ]
+};
+
+const manufacturing = {
+  group: "manufacturing",
+  headers: ["Area","Status Known?","Vendor Identified?","Cost Estimated?","Confidence (1–5)"],
+  rows: [
+    ["Manufacturing Process Identified", trueFalse("manufacturing_process_status"), trueFalse("manufacturing_process_vendor"), trueFalse("manufacturing_process_cost"), confidence("manufacturing_process_confidence")],
+    ["Material Identified", trueFalse("manufacturing_material_status"), trueFalse("manufacturing_material_vendor"), trueFalse("manufacturing_material_cost"), confidence("manufacturing_material_confidence")],
+    ["Prototype Method Known", trueFalse("manufacturing_prototype_status"), trueFalse("manufacturing_prototype_vendor"), trueFalse("manufacturing_prototype_cost"), confidence("manufacturing_prototype_confidence")],
+    ["Basic Tolerances Considered", trueFalse("manufacturing_tolerances_status"), trueFalse("manufacturing_tolerances_vendor"), trueFalse("manufacturing_tolerances_cost"), confidence("manufacturing_tolerances_confidence")],
+    ["Assembly Approach Thought Through", trueFalse("manufacturing_assembly_status"), trueFalse("manufacturing_assembly_vendor"), trueFalse("manufacturing_assembly_cost"), confidence("manufacturing_assembly_confidence")],
+    ["Critical Parts Identified", trueFalse("manufacturing_critical_status"), trueFalse("manufacturing_critical_vendor"), trueFalse("manufacturing_critical_cost"), confidence("manufacturing_critical_confidence")],
+    ["OTS vs Custom Parts Known", trueFalse("manufacturing_ots_status"), trueFalse("manufacturing_ots_vendor"), trueFalse("manufacturing_ots_cost"), confidence("manufacturing_ots_confidence")],
+    ["Rough Cost Awareness", trueFalse("manufacturing_cost_status"), trueFalse("manufacturing_cost_vendor"), trueFalse("manufacturing_cost_cost"), confidence("manufacturing_cost_confidence")],
+    ["Basic Feasibility Proven", trueFalse("manufacturing_feasibility_status"), trueFalse("manufacturing_feasibility_vendor"), trueFalse("manufacturing_feasibility_cost"), confidence("manufacturing_feasibility_confidence")],
+    ["Production Quantity (First Batch)", textArea("e.g. 500 units", "manufacturing_production_quantity"), "", "", ""],
+    ["Target Cost Per Unit", textArea("e.g. $4.50", "manufacturing_cost_target"), "", "", ""]
+  ]
+};
+
+const knowledge = {
+  group: "knowledge",
+  headers: ["Area","Knowledge Level","Need Expert Help"],
+  rows: [
+    ["Problem Understanding", knowledgeLevel("knowledge_problem"), trueFalse("knowledge_problem_expert")],
+    ["User & Context Knowledge", knowledgeLevel("knowledge_user"), trueFalse("knowledge_user_expert")],
+    ["Development Roadmap", knowledgeLevel("knowledge_planning"), trueFalse("knowledge_planning_expert")],
+    ["Design & Prototyping", knowledgeLevel("knowledge_design"), trueFalse("knowledge_design_expert")],
+    ["Science & Engineering Principles", knowledgeLevel("knowledge_science"), trueFalse("knowledge_science_expert")],
+    ["Materials Knowledge", knowledgeLevel("knowledge_materials"), trueFalse("knowledge_materials_expert")],
+    ["Manufacturing Process Knowledge", knowledgeLevel("knowledge_mfg"), trueFalse("knowledge_mfg_expert")],
+    ["Electronics Knowledge", knowledgeLevel("knowledge_electronics"), trueFalse("knowledge_electronics_expert")],
+    ["Components Knowledge", knowledgeLevel("knowledge_components"), trueFalse("knowledge_components_expert")],
+    ["Safety & Risk Knowledge", knowledgeLevel("knowledge_safety"), trueFalse("knowledge_safety_expert")],
+    ["Regulatory & Compliance Knowledge", knowledgeLevel("knowledge_compliance"), trueFalse("knowledge_compliance_expert")],
+    ["Testing & Validation Knowledge", knowledgeLevel("knowledge_testing"), trueFalse("knowledge_testing_expert")],
+    ["Target Specifications", knowledgeLevel("knowledge_specs"), trueFalse("knowledge_specs_expert")]
+  ]
+};
+
+/* ================= RENDER ================= */
+
+function renderTable(title, cfg) {
+  let html = `<h2>${title}</h2><table data-group="${cfg.group}"><tr>`;
+  cfg.headers.forEach(h => html += `<th>${h}</th>`);
+  html += `</tr>`;
+  cfg.rows.forEach(r => {
+    html += `<tr>`;
+    r.forEach(c => html += `<td>${c}</td>`);
+    html += `</tr>`;
+  });
+  html += `</table>`;
+  return html;
+}
+
+/* ================= AUTO EXPERT NEED DETECTION ================= */
+
+function autoSetExpertNeed(knowledgeValue) {
+  if (knowledgeValue === "2") {
+    return "0";
+  }
+  if (knowledgeValue === "1" || knowledgeValue === "0") {
+    return "1";
+  }
+  return "";
+}
+
+function handleKnowledgeChange(fieldId) {
+  if (!fieldId) return;
+  
+  const knowledgeDropdown = document.getElementById(fieldId);
+  if (!knowledgeDropdown) return;
+  
+  const expertFieldId = fieldId + "_expert";
+  const expertDropdown = document.getElementById(expertFieldId);
+  if (!expertDropdown) return;
+
+  const knowledgeValue = knowledgeDropdown.value;
+  const expertValue = autoSetExpertNeed(knowledgeValue);
+  expertDropdown.value = expertValue;
+  
+  console.log(`⚙️ Auto-set ${expertFieldId}: "${knowledgeValue}" → ${expertValue}`);
+}
+
+document.getElementById("tables").innerHTML =
+  renderTable("Knowledge Readiness", knowledge) +
+  renderTable("Functional Requirements", functional) +
+  renderTable("Non-Functional Requirements", nonfunctional) +
+  renderTable("Manufacturing Readiness", manufacturing);
+
+// ===== Auto-fill from chatbot AFTER DOM is ready =====
+setTimeout(() => {
+  console.log("🔄 Auto-filling PRC with chatbot answers...");
+  console.log("📊 Chatbot answers:", chatbotAnswers);
+  
+  function convertValue(value, fieldId) {
+    // Handle knowledge levels (string to numeric: 2=Know Enough, 1=Know Partially, 0=Don't Know)
+    if (fieldId && fieldId.startsWith("knowledge_") && !fieldId.endsWith("_expert")) {
+      if (value === "Know Enough") return "2";
+      if (value === "Know Partially") return "1";
+      if (value === "Don't Know") return "0";
+    }
+    
+    // Handle TRUE/FALSE strings → 1/0
+    if (value === "TRUE" || value === true || value === "true" || value === "yes" || value === "YES" || value === 1) {
+      return "1";
+    }
+    if (value === "FALSE" || value === false || value === "false" || value === "no" || value === "NO" || value === 0) {
+      return "0";
+    }
+    
+    // Handle risk levels (string to numeric: 2=Low, 1=Medium, 0=High)
+    if (fieldId && fieldId.includes("risk")) {
+      if (value === "Low") return "2";
+      if (value === "Medium") return "1";
+      if (value === "High") return "0";
+    }
+    
+    // Handle numeric values
+    if (typeof value === "number") {
+      return String(value);
+    }
+    
+    // Return text as-is for textareas
+    return String(value || "");
+  }
+  
+  let filledCount = 0;
+  for (const id in chatbotAnswers) {
+    const el = document.getElementById(id);
+    if (el) {
+      const convertedValue = convertValue(chatbotAnswers[id], id);
+      el.value = convertedValue;
+      console.log(`   ✓ Filled ${id}: "${chatbotAnswers[id]}" → "${convertedValue}"`);
+      
+      // Auto-set expert field based on knowledge level
+      if (id.startsWith("knowledge_") && !id.endsWith("_expert")) {
+        handleKnowledgeChange(id);
+      }
+      
+      filledCount++;
+    }
+  }
+  
+  console.log(`✅ Auto-fill complete: ${filledCount} fields filled`);
+  recalculate();
+}, 300);
+
+/* ================= CHARTS ================= */
+
+const scores = { functional:0, nonfunctional:0, manufacturing:0, knowledge:0 };
+
+const pie = new Chart(document.getElementById("pie"), {
+  type: "pie",
+  data: { labels: Object.keys(scores), datasets: [{ data: Object.values(scores) }] }
+});
+
+const bar = new Chart(document.getElementById("bar"), {
+  type: "bar",
+  data: { labels: Object.keys(scores), datasets: [{ label: "Readiness Score", data: Object.values(scores) }] },
+  options: { scales: { y: { beginAtZero: true } } }
+});
+
+function recalculate() {
+  for (let k in scores) scores[k] = 0;
+
+  document.querySelectorAll("table[data-group]").forEach(t => {
+    const g = t.dataset.group;
+    t.querySelectorAll("select").forEach(s => {
+      if (s.value !== "") {
+        scores[g] += Number(s.value) || 0;
+      }
+    });
+  });
+
+  pie.data.datasets[0].data = Object.values(scores);
+  bar.data.datasets[0].data = Object.values(scores);
+  pie.update();
+  bar.update();
+}
+
+/* ================= PDF ================= */
+
+function downloadPDF() {
+  window.print();
+}
+</script>
+<button class="download-btn" onclick="downloadPDF()">Download Report</button>
+<div class="next-steps">
+  <h2>What's Next?</h2>
+  <p>This assessment helps you see where your product stands.</p>
+  <p>Fill any gaps by diving back into research.</p>
+  <p>
+    Once you're ready, <a
+      href="https://www.stelnadesigns.com/contact"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      reach out and start building your MVP.
+    </a>
+  </p>
+</div>
+</body>
+</html>

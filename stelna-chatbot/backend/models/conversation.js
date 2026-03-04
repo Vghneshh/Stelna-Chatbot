@@ -19,4 +19,15 @@ const conversationSchema = new mongoose.Schema({
   quotationStatus: String
 }, { timestamps: true });
 
+const prcFlowSchema = new mongoose.Schema({
+  inProgress: { type: Boolean, default: false },
+  currentQuestion: { type: Number, default: 0 },
+  answers: { type: mongoose.Schema.Types.Mixed, default: {} }
+});
+
+conversationSchema.add({ 
+  flowState: { type: String, default: "MENU" },  // "MENU" or "PRC"
+  prcFlow: prcFlowSchema
+});
+
 module.exports = mongoose.model("Conversation", conversationSchema);
