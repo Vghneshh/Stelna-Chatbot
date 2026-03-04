@@ -429,23 +429,20 @@ function autoSetExpertNeed(knowledgeValue) {
     return "TRUE";
   }
 
-  return "--";
+  return "";
 }
 
-function handleKnowledgeChange(fieldId) {
-  if (!fieldId) return;
-  
-  const knowledgeDropdown = document.getElementById(fieldId);
+function handleKnowledgeChange(knowledgeFieldId) {
+  const knowledgeDropdown = document.getElementById(knowledgeFieldId);
   if (!knowledgeDropdown) return;
-  
-  const expertFieldId = fieldId + "_expert";
+
+  const expertFieldId = `${knowledgeFieldId}_expert`;
   const expertDropdown = document.getElementById(expertFieldId);
   if (!expertDropdown) return;
 
   const knowledgeValue = knowledgeDropdown.value;
   const expertValue = autoSetExpertNeed(knowledgeValue);
-  
-  // Convert TRUE/FALSE to dropdown values (1/0)
+
   if (expertValue === "TRUE") {
     expertDropdown.value = "1";
   } else if (expertValue === "FALSE") {
@@ -453,7 +450,7 @@ function handleKnowledgeChange(fieldId) {
   } else {
     expertDropdown.value = "";
   }
-  
+
   console.log(`⚙️ Auto-set ${expertFieldId}: "${knowledgeValue}" → ${expertValue}`);
 }
 
@@ -463,17 +460,123 @@ document.getElementById("tables").innerHTML =
   renderTable("Non-Functional Requirements", nonfunctional) +
   renderTable("Manufacturing Readiness", manufacturing);
 
+// ===== Map chatbot answers to PRC form fields =====
+function mapChatbotAnswersToPRC(answers) {
+  const mapped = {};
+  
+  // Helper to check if answer contains yes/positive indicators
+  const isPositive = (text) => {
+    if (!text) return false;
+    const positive = ["yes", "have", "done", "created", "designed", "identified", "aware", "know", "familiar"];
+    return positive.some(word => text.toLowerCase().includes(word));
+  };
+  
+  // Q1: Product description
+  if (answers.q1) {
+    mapped.functional_core_example = answers.q1;
+    mapped.knowledge_problem = isPositive(answers.q1) ? "Know Enough" : "Know Partially";
+    mapped.knowledge_user = isPositive(answers.q1) ? "Know Enough" : "Know Partially";
+  }
+  
+  // Q2: Core functionality & design
+  if (answers.q2) {
+    mapped.knowledge_science = isPositive(answers.q2) ? "Know Enough" : "Know Partially";
+    mapped.knowledge_design = isPositive(answers.q2) ? "Know Enough" : "Know Partially";
+    mapped.functional_core_design = isPositive(answers.q2) ? "1" : "0";
+  }
+  
+  // Q3: Prototyping & materials
+  if (answers.q3) {
+    mapped.knowledge_materials = isPositive(answers.q3) ? "Know Enough" : "Know Partially";
+    mapped.knowledge_mfg = isPositive(answers.q3) ? "Know Enough" : "Know Partially";
+    mapped.manufacturing_prototype_status = isPositive(answers.q3) ? "1" : "0";
+  }
+  
+  // Q4: Testing & validation
+  if (answers.q4) {
+    mapped.knowledge_testing = isPositive(answers.q4) ? "Know Enough" : "Know Partially";
+    mapped.functional_core_tested = isPositive(answers.q4) ? "1" : "0";
+    mapped.nonfunctional_durability_defined = isPositive(answers.q4) ? "1" : "0";
+    mapped.nonfunctional_safety_defined = isPositive(answers.q4) ? "1" : "0";
+  }
+  
+  // Q5: Manufacturing & cost
+  if (answers.q5) {
+    mapped.knowledge_mfg = isPositive(answers.q5) ? "Know Enough" : "Know Partially";
+    mapped.manufacturing_process_status = isPositive(answers.q5) ? "1" : "0";
+    mapped.manufacturing_cost_status = isPositive(answers.q5) ? "1" : "0";
+  }
+  
+  // Q6: Materials & tolerances
+  if (answers.q6) {
+    mapped.knowledge_materials = isPositive(answers.q6) ? "Know Enough" : "Know Partially";
+    mapped.manufacturing_material_status = isPositive(answers.q6) ? "1" : "0";
+    mapped.manufacturing_tolerances_status = isPositive(answers.q6) ? "1" : "0";
+    mapped.nonfunctional_durability_defined = isPositive(answers.q6) ? "1" : "0";
+  }
+  
+  // Q7: Target specs & aesthetics
+  if (answers.q7) {
+    mapped.knowledge_specs = isPositive(answers.q7) ? "Know Enough" : "Know Partially";
+    mapped.nonfunctional_weight_defined = isPositive(answers.q7) ? "1" : "0";
+    mapped.nonfunctional_compliance_defined = isPositive(answers.q7) ? "1" : "0";
+  }
+  
+  // Q8: Electronics & components
+  if (answers.q8) {
+    mapped.knowledge_electronics = isPositive(answers.q8) ? "Know Enough" : "Know Partially";
+    mapped.knowledge_components = isPositive(answers.q8) ? "Know Enough" : "Know Partially";
+    mapped.manufacturing_critical_status = isPositive(answers.q8) ? "1" : "0";
+  }
+  
+  // Q9: Regulatory & compliance
+  if (answers.q9) {
+    mapped.knowledge_compliance = isPositive(answers.q9) ? "Know Enough" : "Know Partially";
+    mapped.nonfunctional_compliance_defined = isPositive(answers.q9) ? "1" : "0";
+  }
+  
+  // Q10: Assembly & manufacturing
+  if (answers.q10) {
+    mapped.knowledge_mfg = isPositive(answers.q10) ? "Know Enough" : "Know Partially";
+    mapped.manufacturing_assembly_status = isPositive(answers.q10) ? "1" : "0";
+    mapped.manufacturing_critical_status = isPositive(answers.q10) ? "1" : "0";
+  }
+  
+  // Q11: Knowledge gaps & expert needs
+  if (answers.q11) {
+    const needsHelp = answers.q11.toLowerCase().includes("expert") || answers.q11.toLowerCase().includes("help") || answers.q11.toLowerCase().includes("outsourc");
+    if (needsHelp) {
+      mapped.knowledge_design_expert = "1";
+      mapped.knowledge_mfg_expert = "1";
+      mapped.knowledge_electronics_expert = "1";
+      mapped.knowledge_components_expert = "1";
+      mapped.knowledge_testing_expert = "1";
+    }
+  }
+  
+  // Q12: Business & market readiness
+  if (answers.q12) {
+    mapped.knowledge_planning = isPositive(answers.q12) ? "Know Enough" : "Know Partially";
+  }
+  
+  return mapped;
+}
+
 // ===== Auto-fill from chatbot AFTER DOM is ready =====
 setTimeout(() => {
   console.log("🔄 Auto-filling PRC with chatbot answers...");
   console.log("📊 Chatbot answers:", chatbotAnswers);
   
+  // Map chatbot answers to PRC fields
+  const mappedAnswers = mapChatbotAnswersToPRC(chatbotAnswers);
+  console.log("📋 Mapped PRC fields:", mappedAnswers);
+  
   let filledCount = 0;
-  for (const id in chatbotAnswers) {
+  for (const id in mappedAnswers) {
     const el = document.getElementById(id);
     if (el) {
       const oldValue = el.value;
-      let newValue = chatbotAnswers[id];
+      let newValue = mappedAnswers[id];
       
       // Convert backend values to dropdown values (1/0)
       if (newValue === true || newValue === "TRUE" || newValue === "true" || newValue === "yes" || newValue === "YES") {
@@ -485,7 +588,7 @@ setTimeout(() => {
       }
       
       el.value = newValue;
-      console.log(`   ✓ Filled ${id}: "${oldValue}" → "${newValue}" (original: "${chatbotAnswers[id]}")`);
+      console.log(`   ✓ Filled ${id}: "${oldValue}" → "${newValue}"`);
       
       // If this is a knowledge field, auto-set the expert field
       if (id.startsWith("knowledge_") && !id.endsWith("_expert") && id !== "knowledge_support") {
