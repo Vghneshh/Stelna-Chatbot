@@ -282,23 +282,23 @@ if (!chatbotAnswers || Object.keys(chatbotAnswers).length === 0) {
 
 const yesNo = (id) => `
 <select ${id ? `id="${id}"` : ''} onchange="recalculate()">
-  <option value="">--</option>
-  <option value="1">Yes</option>
-  <option value="0">No</option>
+  <option value="--">--</option>
+  <option value="Yes">Yes</option>
+  <option value="No">No</option>
 </select>`;
 
 const trueFalse = (id) => `
 <select ${id ? `id="${id}"` : ''} onchange="recalculate()">
-  <option value="">--</option>
-  <option value="1">TRUE</option>
-  <option value="0">FALSE</option>
+  <option value="--">--</option>
+  <option value="TRUE">TRUE</option>
+  <option value="FALSE">FALSE</option>
 </select>`;
 
 const featureType = (id) => `
 <select ${id ? `id="${id}"` : ''} onchange="recalculate()">
-  <option value="">--</option>
+  <option value="--">--</option>
   <option value="Core">Core</option>
-  <option value="Secondary">Secondary</option>
+  <option value="Supporting">Supporting</option>
   <option value="Optional">Optional</option>
 </select>`;
 
@@ -351,14 +351,14 @@ const functional = {
 
 const nonfunctional = {
   group: "nonfunctional",
-  headers: ["Requirement","Target Specification","Defined?","Validated?","Risk Level"],
+  headers: ["Requirement","Target","Defined?","Validated?","Risk Level"],
   rows: [
-    ["Weight", textArea("< 1 kg"), textArea("e.g. < 200g", "nonfunctional_weight_target"), trueFalse("nonfunctional_weight_defined"), trueFalse("nonfunctional_weight_validated"), risk("nonfunctional_weight_risk")],
-    ["Durability", textArea("Drop-proof & waterproof"), textArea("e.g. drop protection up to 1.5m", "nonfunctional_durability_target"), trueFalse("nonfunctional_durability_defined"), trueFalse("nonfunctional_durability_validated"), risk("nonfunctional_durability_risk")],
-    ["Safety", textArea("Non-toxic materials"), textArea("e.g. skin-safe / non-toxic", "nonfunctional_safety_target"), trueFalse("nonfunctional_safety_defined"), trueFalse("nonfunctional_safety_validated"), risk("nonfunctional_safety_risk")],
-    ["Compliance", textArea("IEC / CE"), textArea("e.g. CE / IEC", "nonfunctional_compliance_target"), trueFalse("nonfunctional_compliance_defined"), trueFalse("nonfunctional_compliance_validated"), risk("nonfunctional_compliance_risk")],
-    ["Aesthetics", textArea("Rugged outdoor look"), textArea("e.g. premium modern design", "nonfunctional_aesthetics_target"), trueFalse("nonfunctional_aesthetics_defined"), trueFalse("nonfunctional_aesthetics_validated"), risk("nonfunctional_aesthetics_risk")],
-    ["Usage Environment", textArea("Indoor / Outdoor"), textArea("e.g. indoor and outdoor", "nonfunctional_usage_environment"), yesNo("nonfunctional_environment_defined"), trueFalse("nonfunctional_environment_validated"), risk("nonfunctional_environment_risk")]
+    ["Weight", textArea("e.g. < 200g", "nonfunctional_weight_target"), trueFalse("nonfunctional_weight_defined"), trueFalse("nonfunctional_weight_validated"), risk("nonfunctional_weight_risk")],
+    ["Durability", textArea("e.g. drop protection up to 1.5m", "nonfunctional_durability_target"), trueFalse("nonfunctional_durability_defined"), trueFalse("nonfunctional_durability_validated"), risk("nonfunctional_durability_risk")],
+    ["Safety", textArea("e.g. skin-safe / non-toxic", "nonfunctional_safety_target"), trueFalse("nonfunctional_safety_defined"), trueFalse("nonfunctional_safety_validated"), risk("nonfunctional_safety_risk")],
+    ["Compliance", textArea("e.g. CE / IEC", "nonfunctional_compliance_target"), trueFalse("nonfunctional_compliance_defined"), trueFalse("nonfunctional_compliance_validated"), risk("nonfunctional_compliance_risk")],
+    ["Aesthetics", textArea("e.g. premium modern design", "nonfunctional_aesthetics_target"), trueFalse("nonfunctional_aesthetics_defined"), trueFalse("nonfunctional_aesthetics_validated"), risk("nonfunctional_aesthetics_risk")],
+    ["Usage Environment", textArea("e.g. indoor and outdoor", "nonfunctional_usage_environment"), trueFalse("nonfunctional_environment_defined"), trueFalse("nonfunctional_environment_validated"), risk("nonfunctional_environment_risk")]
   ]
 };
 
@@ -374,9 +374,7 @@ const manufacturing = {
     ["Critical Parts Identified", trueFalse("manufacturing_critical_status"), trueFalse("manufacturing_critical_vendor"), trueFalse("manufacturing_critical_cost"), confidence("manufacturing_critical_confidence")],
     ["OTS vs Custom Parts Known", trueFalse("manufacturing_ots_status"), trueFalse("manufacturing_ots_vendor"), trueFalse("manufacturing_ots_cost"), confidence("manufacturing_ots_confidence")],
     ["Rough Cost Awareness", trueFalse("manufacturing_cost_status"), trueFalse("manufacturing_cost_vendor"), trueFalse("manufacturing_cost_cost"), confidence("manufacturing_cost_confidence")],
-    ["Basic Feasibility Proven", trueFalse("manufacturing_feasibility_status"), trueFalse("manufacturing_feasibility_vendor"), trueFalse("manufacturing_feasibility_cost"), confidence("manufacturing_feasibility_confidence")],
-    ["Production Quantity (First Batch)", textArea("e.g. 500 units", "manufacturing_production_quantity"), "", "", ""],
-    ["Target Cost Per Unit", textArea("e.g. $4.50", "manufacturing_cost_target"), "", "", ""]
+    ["Basic Feasibility Proven", trueFalse("manufacturing_feasibility_status"), trueFalse("manufacturing_feasibility_vendor"), trueFalse("manufacturing_feasibility_cost"), confidence("manufacturing_feasibility_confidence")]
   ]
 };
 
@@ -395,24 +393,167 @@ const knowledge = {
     ["Components Knowledge", knowledgeLevel("knowledge_components"), trueFalse("knowledge_components_expert")],
     ["Safety & Risk Knowledge", knowledgeLevel("knowledge_safety"), trueFalse("knowledge_safety_expert")],
     ["Regulatory & Compliance Knowledge", knowledgeLevel("knowledge_compliance"), trueFalse("knowledge_compliance_expert")],
-    ["Testing & Validation Knowledge", knowledgeLevel("knowledge_testing"), trueFalse("knowledge_testing_expert")],
-    ["Target Specifications", knowledgeLevel("knowledge_specs"), trueFalse("knowledge_specs_expert")]
+    ["Testing & Validation Knowledge", knowledgeLevel("knowledge_testing"), trueFalse("knowledge_testing_expert")]
   ]
 };
 
 /* ================= RENDER ================= */
 
 function renderTable(title, cfg) {
-  let html = `<h2>${title}</h2><table data-group="${cfg.group}"><tr>`;
+  const tableId = cfg.group === "functional"
+    ? " id=\"functional-table\""
+    : cfg.group === "nonfunctional"
+      ? " id=\"non-functional-table\""
+      : "";
+  let html = `<h2>${title}</h2><table${tableId} data-group="${cfg.group}"><tr>`;
   cfg.headers.forEach(h => html += `<th>${h}</th>`);
-  html += `</tr>`;
+  html += `</tr><tbody${cfg.group === "functional" ? " id=\"functionalTableBody\"" : ""}>`;
   cfg.rows.forEach(r => {
     html += `<tr>`;
     r.forEach(c => html += `<td>${c}</td>`);
     html += `</tr>`;
   });
-  html += `</table>`;
+  html += `</tbody></table>`;
   return html;
+}
+
+/* ================= POPULATE TABLES ================= */
+
+function populateKnowledgeReadinessTable(data) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return;
+  }
+
+  // Keyed by stable id from knowledgeReadinessBuilder — never by display label.
+  const idMap = {
+    problemUnderstanding:  "knowledge_problem",
+    userContextKnowledge:  "knowledge_user",
+    developmentRoadmap:    "knowledge_planning",
+    designPrototyping:     "knowledge_design",
+    scienceEngineering:    "knowledge_science",
+    materialsKnowledge:    "knowledge_materials",
+    manufacturingKnowledge:"knowledge_mfg",
+    electronicsKnowledge:  "knowledge_electronics",
+    componentsKnowledge:   "knowledge_components",
+    safetyRiskKnowledge:   "knowledge_safety",
+    regulatoryCompliance:  "knowledge_compliance",
+    testingValidation:     "knowledge_testing"
+  };
+
+  data.forEach((item) => {
+    const baseId = idMap[item.id];
+    if (!baseId) return;
+
+    // Set knowledge level
+    const levelField = document.getElementById(baseId);
+    if (levelField) {
+      levelField.value = item.level === "Know Enough" ? "Know Enough" : item.level === "Know Partially" ? "Know Partially" : "";
+    }
+
+    // Set need expert help
+    const expertField = document.getElementById(`${baseId}_expert`);
+    if (expertField) {
+      expertField.value = item.help || "";
+    }
+  });
+}
+
+function populateFunctionalRequirements(rows) {
+  console.log("🔍 populateFunctionalRequirements called with", rows?.length, "rows");
+  
+  if (!Array.isArray(rows) || rows.length === 0) {
+    console.log("⚠️ No valid rows to populate");
+    return;
+  }
+
+  const normalizeYesNo = (v) => {
+    if (v === true || v === "true" || v === 1 || v === "1") return "Yes";
+    if (v === false || v === "false" || v === 0 || v === "0") return "No";
+    if (v === "Yes" || v === "No") return v;
+    return "--";
+  };
+
+  const normalizeTF = (v) => {
+    if (v === true || v === "true" || v === 1 || v === "1") return "TRUE";
+    if (v === false || v === "false" || v === 0 || v === "0") return "FALSE";
+    if (v === "TRUE" || v === "FALSE") return v;
+    return "--";
+  };
+
+  // Map of array index to feature key prefix
+  const idMap = [
+    "functional_core",           // 0
+    "functional_energy",         // 1
+    "functional_control",        // 2
+    "functional_interaction",    // 3
+    "functional_environment",    // 4
+    "functional_mechanical",     // 5
+    "functional_modularity",     // 6
+    "functional_maintenance",    // 7
+    "functional_interfaces",     // 8
+    "functional_optional"        // 9
+  ];
+
+  rows.forEach((r, i) => {
+    const prefix = idMap[i];
+    if (!prefix) return;
+
+    console.log(`✅ Row ${i} [${r.feature || 'Unknown'}]`);
+
+    // Example text
+    const exampleEl = document.getElementById(`${prefix}_example`);
+    if (exampleEl && r.example) {
+      exampleEl.value = r.example;
+      console.log(`  → Set example to: "${r.example.substring(0, 30)}..."`);
+    }
+
+    // Must Have
+    const mustHaveEl = document.getElementById(`${prefix}_musthave`);
+    if (mustHaveEl) {
+      const normalized = normalizeYesNo(r.mustHave);
+      mustHaveEl.value = normalized;
+      console.log(`  → Set mustHave to: "${normalized}"`);
+    }
+
+    // Feature Type
+    const featureTypeEl = document.getElementById(`${prefix}_featureType`);
+    if (featureTypeEl) {
+      featureTypeEl.value = r.featureType || "--";
+      console.log(`  → Set featureType to: "${r.featureType || '--'}"`);
+    }
+
+    // Understand Working
+    const workingEl = document.getElementById(`${prefix}_understanding`);
+    if (workingEl) {
+      const normalized = normalizeTF(r.understandWorking);
+      workingEl.value = normalized;
+      console.log(`  → Set understanding to: "${normalized}"`);
+    }
+
+    // Design Defined
+    const designEl = document.getElementById(`${prefix}_design`);
+    if (designEl) {
+      const normalized = normalizeTF(r.designDefined);
+      designEl.value = normalized;
+      console.log(`  → Set design to: "${normalized}"`);
+    }
+
+    // Tested
+    const testedEl = document.getElementById(`${prefix}_tested`);
+    if (testedEl) {
+      const normalized = normalizeTF(r.tested);
+      testedEl.value = normalized;
+      console.log(`  → Set tested to: "${normalized}"`);
+    }
+  });
+
+  console.log("✅ All functional requirements populated");
+  recalculate();
+}
+
+// Backward-compatible alias for existing calls.
+function populateFunctionalTable(features) {
+  populateFunctionalRequirements(features);
 }
 
 /* ================= AUTO EXPERT NEED DETECTION ================= */
@@ -450,8 +591,6 @@ function handleKnowledgeChange(knowledgeFieldId) {
   } else {
     expertDropdown.value = "";
   }
-
-  console.log(`⚙️ Auto-set ${expertFieldId}: "${knowledgeValue}" → ${expertValue}`);
 }
 
 document.getElementById("tables").innerHTML =
@@ -459,6 +598,48 @@ document.getElementById("tables").innerHTML =
   renderTable("Functional Requirements", functional) +
   renderTable("Non-Functional Requirements", nonfunctional) +
   renderTable("Manufacturing Readiness", manufacturing);
+
+// ===== CHARTS (Initialize before populating tables) =====
+const scores = { functional: 0, nonfunctional: 0, manufacturing: 0, knowledge: 0 };
+
+const pie = new Chart(document.getElementById("pie"), {
+  type: "pie",
+  data: { labels: Object.keys(scores), datasets: [{ data: Object.values(scores) }] }
+});
+
+const bar = new Chart(document.getElementById("bar"), {
+  type: "bar",
+  data: { labels: Object.keys(scores), datasets: [{ label: "Readiness Score", data: Object.values(scores) }] },
+  options: { scales: { y: { beginAtZero: true } } }
+});
+
+// ===== LOAD PRC DATA FROM localStorage =====
+try {
+  const prcDataStr = localStorage.getItem("prcData");
+  if (prcDataStr) {
+    const prcData = JSON.parse(prcDataStr);
+    console.log("📦 Loaded prcData from localStorage:", prcData);
+    console.log("📋 functionalRequirements count:", prcData.functionalRequirements?.length || 0);
+    console.log("📋 First functional requirement:", prcData.functionalRequirements?.[0]);
+    
+    // Populate all tables from consolidated prcData
+    if (prcData.knowledgeReadiness && prcData.knowledgeReadiness.length > 0) {
+      populateKnowledgeReadinessTable(prcData.knowledgeReadiness);
+    }
+    
+    populateFunctionalRequirements(prcData.functionalRequirements || []);
+    
+    populateNonFunctionalTable(prcData.nonFunctionalRequirements || []);
+    
+    if (prcData.manufacturingReadiness && prcData.manufacturingReadiness.length > 0) {
+      populateManufacturingTable(prcData.manufacturingReadiness);
+    }
+  } else {
+    console.log("⚠️ No prcData found in localStorage");
+  }
+} catch (err) {
+  console.error("Error loading PRC data:", err);
+}
 
 // ===== Map chatbot answers to PRC form fields =====
 function mapChatbotAnswersToPRC(answers) {
@@ -517,7 +698,6 @@ function mapChatbotAnswersToPRC(answers) {
   
   // Q7: Target specs & aesthetics
   if (answers.q7) {
-    mapped.knowledge_specs = isPositive(answers.q7) ? "Know Enough" : "Know Partially";
     mapped.nonfunctional_weight_defined = isPositive(answers.q7) ? "1" : "0";
     mapped.nonfunctional_compliance_defined = isPositive(answers.q7) ? "1" : "0";
   }
@@ -564,18 +744,11 @@ function mapChatbotAnswersToPRC(answers) {
 
 // ===== Auto-fill from chatbot AFTER DOM is ready =====
 setTimeout(() => {
-  console.log("🔄 Auto-filling PRC with chatbot answers...");
-  console.log("📊 Chatbot answers:", chatbotAnswers);
-  
-  // Map chatbot answers to PRC fields
   const mappedAnswers = mapChatbotAnswersToPRC(chatbotAnswers);
-  console.log("📋 Mapped PRC fields:", mappedAnswers);
   
-  let filledCount = 0;
   for (const id in mappedAnswers) {
     const el = document.getElementById(id);
     if (el) {
-      const oldValue = el.value;
       let newValue = mappedAnswers[id];
       
       // Convert backend values to dropdown values (1/0)
@@ -588,39 +761,109 @@ setTimeout(() => {
       }
       
       el.value = newValue;
-      console.log(`   ✓ Filled ${id}: "${oldValue}" → "${newValue}"`);
       
       // If this is a knowledge field, auto-set the expert field
       if (id.startsWith("knowledge_") && !id.endsWith("_expert") && id !== "knowledge_support") {
         handleKnowledgeChange(id);
       }
-      
-      filledCount++;
-    } else {
-      console.log(`   ✗ Element not found: ${id}`);
     }
   }
   
-  console.log(`✅ Auto-fill complete: ${filledCount} fields filled`);
   recalculate();
 }, 300);
 
-/* ================= CHARTS ================= */
+/* ================= POPULATE NON-FUNCTIONAL REQUIREMENTS ================= */
 
-const scores = { functional:0, nonfunctional:0, manufacturing:0, knowledge:0 };
+function populateNonFunctionalTable(data) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return;
+  }
 
-const pie = new Chart(document.getElementById("pie"), {
-  type: "pie",
-  data: { labels: Object.keys(scores), datasets: [{ data: Object.values(scores) }] }
-});
+  const categoryMap = {
+    weight: { target: "nonfunctional_weight_target", defined: "nonfunctional_weight_defined", validated: "nonfunctional_weight_validated", risk: "nonfunctional_weight_risk" },
+    durability: { target: "nonfunctional_durability_target", defined: "nonfunctional_durability_defined", validated: "nonfunctional_durability_validated", risk: "nonfunctional_durability_risk" },
+    safety: { target: "nonfunctional_safety_target", defined: "nonfunctional_safety_defined", validated: "nonfunctional_safety_validated", risk: "nonfunctional_safety_risk" },
+    compliance: { target: "nonfunctional_compliance_target", defined: "nonfunctional_compliance_defined", validated: "nonfunctional_compliance_validated", risk: "nonfunctional_compliance_risk" },
+    aesthetics: { target: "nonfunctional_aesthetics_target", defined: "nonfunctional_aesthetics_defined", validated: "nonfunctional_aesthetics_validated", risk: "nonfunctional_aesthetics_risk" },
+    usageenvironment: { target: "nonfunctional_usage_environment", defined: "nonfunctional_environment_defined", validated: "nonfunctional_environment_validated", risk: "nonfunctional_environment_risk" }
+  };
 
-const bar = new Chart(document.getElementById("bar"), {
-  type: "bar",
-  data: { labels: Object.keys(scores), datasets: [{ label: "Readiness Score", data: Object.values(scores) }] },
-  options: { scales: { y: { beginAtZero: true } } }
-});
+  data.forEach((item) => {
+    const catKey = (item.category || "").toLowerCase().replace(/\s+/g, "");
+    const ids = categoryMap[catKey];
+
+    if (ids) {
+      if (ids.target && item.target && item.target !== "--") {
+        const targetEl = document.getElementById(ids.target);
+        if (targetEl) targetEl.value = item.target;
+      }
+
+      if (ids.defined && item.defined) {
+        const definedEl = document.getElementById(ids.defined);
+        if (definedEl) definedEl.value = item.defined === "Yes" ? "TRUE" : "FALSE";
+      }
+
+      if (ids.validated && item.validated) {
+        const validatedEl = document.getElementById(ids.validated);
+        if (validatedEl) validatedEl.value = item.validated === "Yes" ? "TRUE" : "FALSE";
+      }
+
+      if (ids.risk && item.risk) {
+        const riskEl = document.getElementById(ids.risk);
+        if (riskEl) {
+          const riskMap = { "Low": "2", "Medium": "1", "High": "0" };
+          riskEl.value = riskMap[item.risk] || "";
+        }
+      }
+    }
+  });
+}
+
+/* ================= POPULATE MANUFACTURING READINESS ================= */
+
+function populateManufacturingTable(data) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return;
+  }
+
+  const aspectMap = {
+    manufacturingprocess: "process",
+    materialidentified: "material",
+    prototypemethod: "prototype",
+    tolerances: "tolerances",
+    assemblyapproach: "assembly",
+    criticalparts: "critical",
+    otsvscustom: "ots",
+    roughcost: "cost",
+    feasibility: "feasibility"
+  };
+
+  data.forEach((item) => {
+    const aspKey = (item.aspect || "").toLowerCase().replace(/\s+/g, "");
+    const aspect = aspectMap[aspKey];
+
+    if (aspect) {
+      const statusEl = document.getElementById(`manufacturing_${aspect}_status`);
+      const vendorEl = document.getElementById(`manufacturing_${aspect}_vendor`);
+      const costEl = document.getElementById(`manufacturing_${aspect}_cost`);
+      const confidenceEl = document.getElementById(`manufacturing_${aspect}_confidence`);
+
+      if (statusEl && item.status) statusEl.value = item.status === "Yes" ? "TRUE" : "FALSE";
+      if (vendorEl && item.vendor) vendorEl.value = item.vendor === "Yes" ? "TRUE" : "FALSE";
+      if (costEl && item.cost) costEl.value = item.cost === "Yes" ? "TRUE" : "FALSE";
+      if (confidenceEl && item.confidence) confidenceEl.value = String(item.confidence);
+    }
+  });
+}
+
+
 
 function recalculate() {
+  // Only update charts if they exist
+  if (typeof pie === "undefined" || typeof bar === "undefined") {
+    return;
+  }
+
   for (let k in scores) scores[k] = 0;
 
   document.querySelectorAll("table[data-group]").forEach(t => {
@@ -635,8 +878,22 @@ function recalculate() {
           score = 1;
         } else if (s.value === "Don't Know") {
           score = 0;
+        } else if (s.value === "TRUE") {
+          score = 1;
+        } else if (s.value === "FALSE") {
+          score = 0;
+        } else if (s.value === "Yes") {
+          score = 1;
+        } else if (s.value === "No") {
+          score = 0;
+        } else if (s.value === "Core") {
+          score = 2;
+        } else if (s.value === "Supporting") {
+          score = 1;
+        } else if (s.value === "Optional") {
+          score = 0;
         } else {
-          // Fallback for numeric values (legacy support)
+          // Fallback for numeric values
           score = Number(s.value) || 0;
         }
         scores[g] += score;
@@ -644,10 +901,14 @@ function recalculate() {
     });
   });
 
-  pie.data.datasets[0].data = Object.values(scores);
-  bar.data.datasets[0].data = Object.values(scores);
-  pie.update();
-  bar.update();
+  if (typeof pie !== "undefined") {
+    pie.data.datasets[0].data = Object.values(scores);
+    pie.update();
+  }
+  if (typeof bar !== "undefined") {
+    bar.data.datasets[0].data = Object.values(scores);
+    bar.update();
+  }
 }
 
 /* ================= PDF ================= */
