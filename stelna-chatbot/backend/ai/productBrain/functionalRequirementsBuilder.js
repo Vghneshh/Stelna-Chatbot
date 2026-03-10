@@ -53,6 +53,12 @@ function mapFeatureType(importance) {
   return "--";
 }
 
+function mustHaveLabel(importance) {
+  if (importance === "required" || importance === "important") return "Yes";
+  if (importance === "optional") return "No";
+  return "--";
+}
+
 /**
  * Maps feature importance to a type, capped at the given maximum tier.
  * Prevents supporting features from being promoted to "Core" by aggressive cues.
@@ -70,9 +76,9 @@ function mapFeatureTypeWithCap(importance, maxType) {
  * Maps feature signals to readiness flag values (understandWorking / designDefined / tested).
  * Returns "TRUE", "FALSE", or "--" based on available session signals.
  */
-function mapReadinessFlags(signals, featureKey) {
+function mapReadinessFlags(signals, featureKey, extractedExamples) {
   const features = signals.functionalFeatures || {};
-  const hasFeature = !!features[featureKey]; // user has acknowledged this feature
+  const hasFeature = !!features[featureKey] || !!(extractedExamples && extractedExamples[featureKey]); // user has acknowledged this feature (via importance signal or extracted example)
 
   switch (featureKey) {
     case "coreFunctionality":
@@ -82,12 +88,18 @@ function mapReadinessFlags(signals, featureKey) {
         tested: "FALSE"
       };
     case "energyPower":
+      if (signals.hasElectronics === false) {
+        return { understandWorking: "--", designDefined: "--", tested: "--" };
+      }
       return {
         understandWorking: signals.powerSource ? "TRUE" : (hasFeature ? "FALSE" : "--"),
         designDefined: signals.powerSource && signals.powerSource !== signals.coreFunctionalityKnowledge ? "TRUE" : (hasFeature ? "FALSE" : "--"),
         tested: hasFeature ? "FALSE" : "--"
       };
     case "controlLogic":
+      if (signals.hasElectronics === false) {
+        return { understandWorking: "--", designDefined: "--", tested: "--" };
+      }
       return {
         understandWorking: hasFeature ? (signals.electronicsKnowledge ? "TRUE" : "FALSE") : "--",
         designDefined: hasFeature ? "FALSE" : "--",
@@ -117,6 +129,18 @@ function mapReadinessFlags(signals, featureKey) {
         designDefined: signals.connectivity === true ? "TRUE" : (hasFeature ? "FALSE" : "--"),
         tested: hasFeature ? "FALSE" : "--"
       };
+    case "modularity":
+      return {
+        understandWorking: hasFeature ? "TRUE" : "--",
+        designDefined: signals.otsVsCustomParts ? "TRUE" : (hasFeature ? "FALSE" : "--"),
+        tested: hasFeature ? "FALSE" : "--"
+      };
+    case "maintenance":
+      return {
+        understandWorking: hasFeature ? "TRUE" : "--",
+        designDefined: signals.assemblyApproach ? "TRUE" : (hasFeature ? "FALSE" : "--"),
+        tested: hasFeature ? "FALSE" : "--"
+      };
     default:
       return {
         understandWorking: hasFeature ? "FALSE" : "--",
@@ -127,11 +151,15 @@ function mapReadinessFlags(signals, featureKey) {
 }
 
 function buildFunctionalRequirements(signals = {}, answers = {}) {
+  // Snapshot which examples were actually extracted BEFORE ensureAllFunctionalRows fills in placeholders.
+  // This lets hasFeature distinguish real user-provided examples from default placeholder text.
+  const extractedExamples = { ...(signals.functionalExamples || {}) };
+
   ensureAllFunctionalRows(signals);
   const examples = signals.functionalExamples || {};
   const features = signals.functionalFeatures || {};
 
-  const r = (key) => mapReadinessFlags(signals, key);
+  const r = (key) => mapReadinessFlags(signals, key, extractedExamples);
 
   const rows = [
     {
@@ -143,22 +171,22 @@ function buildFunctionalRequirements(signals = {}, answers = {}) {
     },
     {
       feature: "Energy / Power",
-      example: examples.energyPower || "",
-      mustHave: "--",
+      example: signals.hasElectronics === false ? (extractedExamples.energyPower || "") : (examples.energyPower || ""),
+      mustHave: signals.hasElectronics === false ? "--" : mustHaveLabel(features.energyPower),
       featureType: mapFeatureTypeWithCap(features.energyPower, "Supporting"),
       ...r("energyPower")
     },
     {
       feature: "Control & Logic",
-      example: examples.controlLogic || "",
-      mustHave: "--",
-      featureType: mapFeatureTypeWithCap(features.controlLogic, "Supporting"),
+      example: signals.hasElectronics === false ? (extractedExamples.controlLogic || "") : (examples.controlLogic || ""),
+      mustHave: signals.hasElectronics === false ? "--" : mustHaveLabel(features.controlLogic),
+      featureType: signals.hasElectronics === false ? "--" : mapFeatureTypeWithCap(features.controlLogic, "Supporting"),
       ...r("controlLogic")
     },
     {
       feature: "User Interaction",
       example: examples.userInteraction || "",
-      mustHave: "--",
+      mustHave: mustHaveLabel(features.userInteraction),
       featureType: mapFeatureType(features.userInteraction),
       ...r("userInteraction")
     },
@@ -172,35 +200,35 @@ function buildFunctionalRequirements(signals = {}, answers = {}) {
     {
       feature: "Mechanical Structure",
       example: examples.mechanicalStructure || "",
-      mustHave: "--",
+      mustHave: mustHaveLabel(features.mechanicalStructure),
       featureType: mapFeatureTypeWithCap(features.mechanicalStructure, "Supporting"),
       ...r("mechanicalStructure")
     },
     {
       feature: "Modularity",
       example: examples.modularity || "",
-      mustHave: "--",
+      mustHave: mustHaveLabel(features.modularity),
       featureType: mapFeatureType(features.modularity),
       ...r("modularity")
     },
     {
       feature: "Maintenance",
       example: examples.maintenance || "",
-      mustHave: "--",
+      mustHave: mustHaveLabel(features.maintenance),
       featureType: mapFeatureTypeWithCap(features.maintenance, "Supporting"),
       ...r("maintenance")
     },
     {
       feature: "Interfaces",
       example: examples.interfaces || "",
-      mustHave: "--",
+      mustHave: mustHaveLabel(features.interfaces),
       featureType: mapFeatureTypeWithCap(features.interfaces, "Supporting"),
       ...r("interfaces")
     },
     {
       feature: "Optional Enhancements",
       example: examples.optionalEnhancements || "",
-      mustHave: "--",
+      mustHave: mustHaveLabel(features.optionalEnhancements),
       featureType: mapFeatureType(features.optionalEnhancements) || "Optional",
       ...r("optionalEnhancements")
     }

@@ -2,9 +2,7 @@ const prcQuestions = require("./prcQuestions");
 const extractSignals = require("../productBrain/signalExtractor");
 const { extractProductSignals } = require("../productBrain/signalExtractor");
 const {
-  buildFunctionalRequirements,
-  ensureOptionalFeatures,
-  ensureAllFunctionalRows
+  buildFunctionalRequirements
 } = require("../productBrain/functionalRequirementsBuilder");
 const {
   hydrateNonFunctionalFromSignals,
@@ -78,12 +76,17 @@ async function nextQuestion(sessionKey, message) {
       state.sessionSignals = {};
     }
 
-    await extractSignals(state.sessionSignals, currentQuestion.id, message);
+    await extractSignals(state.sessionSignals, currentQuestion.id, message).catch(err => {
+      console.warn("⚠️ Signal extraction failed for question", currentQuestion.id, "—", err.message);
+    });
   }
 
   let botMessage = "Got it! 👍";
   if (currentIndex === 0) {
-    const extracted = await extractProductSignals(message);
+    const extracted = await extractProductSignals(message).catch(err => {
+      console.warn("⚠️ Product signal extraction failed —", err.message);
+      return { product: "", user: "", problem: "", domain: "", hasElectronics: false };
+    });
     state.productSignals = extracted;
     if (extracted.product) state.productName = extracted.product;
     if (extracted.user) state.userSegment = extracted.user;
@@ -111,8 +114,6 @@ async function nextQuestion(sessionKey, message) {
     if (!state.sessionSignals || typeof state.sessionSignals !== "object") {
       state.sessionSignals = {};
     }
-    ensureOptionalFeatures(state.sessionSignals);
-    ensureAllFunctionalRows(state.sessionSignals);
     hydrateNonFunctionalFromSignals(state.sessionSignals);
     ensureNonFunctionalRequirements(state.sessionSignals);
     hydrateManufacturingFromSignals(state.sessionSignals);

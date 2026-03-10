@@ -31,6 +31,13 @@ function buildKnowledgeReadiness(signals) {
   });
 
   rows.push({
+    id: "coreFunctionalityKnowledge",
+    area: "Core Functionality Knowledge",
+    level: signals.coreFunctionalityKnowledge ? "Know Enough" : "--",
+    help: signals.coreFunctionalityKnowledge ? "FALSE" : "--"
+  });
+
+  rows.push({
     id: "developmentRoadmap",
     area: "Development Roadmap",
     level: level(signals.developmentPlan),
@@ -105,6 +112,34 @@ function buildKnowledgeReadiness(signals) {
     area: "Target Specifications",
     level: level(signals.targetSpecClarity),
     help: needHelp(signals.targetSpecClarity)
+  });
+
+  rows.push({
+    id: "failureModesKnowledge",
+    area: "Failure Modes Knowledge",
+    level: level(signals.failureModesKnowledge),
+    help: needHelp(signals.failureModesKnowledge)
+  });
+
+  rows.push({
+    id: "ipAwareness",
+    area: "IP & Prior Art Awareness",
+    level: level(signals.ipAwareness),
+    help: needHelp(signals.ipAwareness)
+  });
+
+  rows.push({
+    id: "scalabilityKnowledge",
+    area: "Scalability Knowledge",
+    level: level(signals.scalabilityKnowledge),
+    help: needHelp(signals.scalabilityKnowledge)
+  });
+
+  rows.push({
+    id: "costEconomicsKnowledge",
+    area: "Cost & Economics Knowledge",
+    level: level(signals.costEconomicsKnowledge),
+    help: needHelp(signals.costEconomicsKnowledge)
   });
 
   return rows;

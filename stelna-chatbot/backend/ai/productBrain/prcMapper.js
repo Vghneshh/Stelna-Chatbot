@@ -31,35 +31,45 @@ function mustHaveFromFeatureImportance(importance) {
 
 function mapKnowledge(signals) {
   const mapping = {
-    knowledge_problem: toKnowledgeLevel(signals.problemClarity),
-    knowledge_user: toKnowledgeLevel(signals.userUnderstanding),
-    knowledge_planning: toKnowledgeLevel(signals.developmentPlan),
-    knowledge_design: toKnowledgeLevel(signals.designClarity),
-    knowledge_science: toKnowledgeLevel(signals.scienceClarity),
-    knowledge_materials: toKnowledgeLevel(signals.materialsKnowledge),
-    knowledge_mfg: toKnowledgeLevel(signals.manufacturingKnowledge),
-    knowledge_electronics: toKnowledgeLevel(signals.electronicsKnowledge),
-    knowledge_components: toKnowledgeLevel(signals.componentsKnowledge),
-    knowledge_safety: toKnowledgeLevel(signals.safetyAwareness),
-    knowledge_compliance: toKnowledgeLevel(signals.complianceAwareness),
-    knowledge_testing: toKnowledgeLevel(signals.testingStatus),
-    knowledge_specs: toKnowledgeLevel(signals.targetSpecClarity)
+    knowledge_problem:       toKnowledgeLevel(signals.problemClarity),
+    knowledge_user:          toKnowledgeLevel(signals.userUnderstanding),
+    knowledge_core_func:     toKnowledgeLevel(signals.coreFunctionalityKnowledge),
+    knowledge_planning:      toKnowledgeLevel(signals.developmentPlan),
+    knowledge_design:        toKnowledgeLevel(signals.designClarity),
+    knowledge_science:       toKnowledgeLevel(signals.scienceClarity),
+    knowledge_materials:     toKnowledgeLevel(signals.materialsKnowledge),
+    knowledge_mfg:           toKnowledgeLevel(signals.manufacturingKnowledge),
+    knowledge_electronics:   toKnowledgeLevel(signals.electronicsKnowledge),
+    knowledge_components:    toKnowledgeLevel(signals.componentsKnowledge),
+    knowledge_safety:        toKnowledgeLevel(signals.safetyAwareness),
+    knowledge_compliance:    toKnowledgeLevel(signals.complianceAwareness),
+    knowledge_testing:       toKnowledgeLevel(signals.testingStatus),
+    knowledge_specs:         toKnowledgeLevel(signals.targetSpecClarity),
+    knowledge_failure:       toKnowledgeLevel(signals.failureModesKnowledge),
+    knowledge_ip:            toKnowledgeLevel(signals.ipAwareness),
+    knowledge_scalability:   toKnowledgeLevel(signals.scalabilityKnowledge),
+    knowledge_cost:          toKnowledgeLevel(signals.costEconomicsKnowledge)
   };
 
-  mapping.knowledge_problem_expert = toExpertFlag(mapping.knowledge_problem);
-  mapping.knowledge_user_expert = toExpertFlag(mapping.knowledge_user);
-  mapping.knowledge_planning_expert = toExpertFlag(mapping.knowledge_planning);
-  mapping.knowledge_design_expert = toExpertFlag(mapping.knowledge_design);
-  mapping.knowledge_science_expert = toExpertFlag(mapping.knowledge_science);
-  mapping.knowledge_materials_expert = toExpertFlag(mapping.knowledge_materials);
-  mapping.knowledge_mfg_expert = toExpertFlag(mapping.knowledge_mfg);
-  mapping.knowledge_electronics_expert = toExpertFlag(mapping.knowledge_electronics);
-  mapping.knowledge_components_expert = toExpertFlag(mapping.knowledge_components);
-  mapping.knowledge_safety_expert = toExpertFlag(mapping.knowledge_safety);
-  mapping.knowledge_compliance_expert = toExpertFlag(mapping.knowledge_compliance);
-  mapping.knowledge_testing_expert = toExpertFlag(mapping.knowledge_testing);
-  mapping.knowledge_specs_expert = toExpertFlag(mapping.knowledge_specs);
-  mapping.knowledge_support = "FALSE";
+  mapping.knowledge_problem_expert      = toExpertFlag(mapping.knowledge_problem);
+  mapping.knowledge_user_expert         = toExpertFlag(mapping.knowledge_user);
+  mapping.knowledge_core_func_expert    = toExpertFlag(mapping.knowledge_core_func);
+  mapping.knowledge_planning_expert     = toExpertFlag(mapping.knowledge_planning);
+  mapping.knowledge_design_expert       = toExpertFlag(mapping.knowledge_design);
+  mapping.knowledge_science_expert      = toExpertFlag(mapping.knowledge_science);
+  mapping.knowledge_materials_expert    = toExpertFlag(mapping.knowledge_materials);
+  mapping.knowledge_mfg_expert          = toExpertFlag(mapping.knowledge_mfg);
+  mapping.knowledge_electronics_expert  = toExpertFlag(mapping.knowledge_electronics);
+  mapping.knowledge_components_expert   = toExpertFlag(mapping.knowledge_components);
+  mapping.knowledge_safety_expert       = toExpertFlag(mapping.knowledge_safety);
+  mapping.knowledge_compliance_expert   = toExpertFlag(mapping.knowledge_compliance);
+  mapping.knowledge_testing_expert      = toExpertFlag(mapping.knowledge_testing);
+  mapping.knowledge_specs_expert        = toExpertFlag(mapping.knowledge_specs);
+  mapping.knowledge_failure_expert      = toExpertFlag(mapping.knowledge_failure);
+  mapping.knowledge_ip_expert           = toExpertFlag(mapping.knowledge_ip);
+  mapping.knowledge_scalability_expert  = toExpertFlag(mapping.knowledge_scalability);
+  mapping.knowledge_cost_expert         = toExpertFlag(mapping.knowledge_cost);
+  mapping.knowledge_support             = "FALSE";
 
   return mapping;
 }

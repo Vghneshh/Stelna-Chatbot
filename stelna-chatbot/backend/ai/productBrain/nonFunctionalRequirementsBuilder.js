@@ -101,7 +101,7 @@ function ensureNonFunctionalRequirements(signals) {
     },
 
     aesthetics: {
-      target: "Rugged outdoor look",
+      target: "Not specified",
       defined: false,
       validated: false,
       risk: "Low"

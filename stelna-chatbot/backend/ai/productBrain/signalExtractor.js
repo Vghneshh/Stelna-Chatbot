@@ -4,6 +4,13 @@
  */
 
 const { generateLLMResponse } = require("../../services/llmService");
+const prcQuestions = require("../prc/prcQuestions");
+
+// Dynamically resolve which question covers weightTarget so this code doesn't
+// break if the question is renamed or reordered.
+const WEIGHT_QUESTION_ID = (prcQuestions.find(
+  q => Array.isArray(q.covers) && q.covers.includes("weightTarget")
+) || {}).id;
 
 /** Locked vocabulary for knowledge-level signals. Use these instead of raw strings. */
 const SIGNAL = {
@@ -353,7 +360,7 @@ Rules:
  * Semantic signal extraction - analyzes ANY answer for signal patterns
  * This runs BEFORE question-specific extraction to catch early insights
  */
-async function extractSemanticSignals(sessionSignals, answer) {
+async function extractSemanticSignals(sessionSignals, answer, questionId) {
   if (!sessionSignals || !answer) return;
   
   const text = answer.toLowerCase();
@@ -450,7 +457,8 @@ async function extractSemanticSignals(sessionSignals, answer) {
       }
     }
     
-    if (text.includes("waterproof") || text.includes("water resistant")) {
+    if ((text.includes("waterproof") || text.includes("water resistant")) &&
+        !/\b(not|non)[- ]?(waterproof|water.resistant)/i.test(text)) {
       sessionSignals.durabilityTarget = sessionSignals.durabilityTarget 
         ? `${sessionSignals.durabilityTarget} and waterproof`
         : "waterproof";
@@ -494,8 +502,10 @@ async function extractSemanticSignals(sessionSignals, answer) {
   }
   
   // ===== WEIGHT TARGET =====
-  const weightMatch = text.match(/(?:under|less|below|max|up to)\s*([\d.]+)\s*(kg|g|lbs?|oz)/i);
-  if (weightMatch) {
+  // The dedicated weight question (whichever covers "weightTarget") is always authoritative — see its branch below.
+  // Here we only do a preliminary capture from earlier answers so something is better than nothing.
+  const weightMatch = text.match(/(?:under|less|below|max|up to)\s*([\d.]+)\s*(kg|grams?|g\b|lbs?|oz)/i);
+  if (weightMatch && !sessionSignals.weightTarget && questionId !== WEIGHT_QUESTION_ID) {
     sessionSignals.weightTarget = `${weightMatch[1]} ${weightMatch[2]}`;
     sessionSignals.weightDefined = true;
     console.log(`🎯 Semantic extraction: weightTarget="${sessionSignals.weightTarget}", weightDefined=${sessionSignals.weightDefined}`);
@@ -507,9 +517,16 @@ async function extractSemanticSignals(sessionSignals, answer) {
     const aesthetics = ["rugged", "slim", "premium", "modern", "industrial", "minimalist"];
     const detected = aesthetics.filter(a => text.includes(a));
     if (detected.length > 0) {
-      sessionSignals.aestheticTarget = `${detected.join(" / ")} design`;
+      // Only overwrite with specific words if we found something more precise
+      // or if no string value has been established yet
+      if (!sessionSignals.aestheticTarget || sessionSignals.aestheticTarget === true) {
+        sessionSignals.aestheticTarget = `${detected.join(" / ")} design`;
+      }
     } else {
-      sessionSignals.aestheticTarget = true;
+      // Never downgrade a concrete string to the boolean placeholder
+      if (!sessionSignals.aestheticTarget) {
+        sessionSignals.aestheticTarget = true;
+      }
     }
     if (sessionSignals.aestheticTarget && sessionSignals.aestheticTarget !== true) {
       sessionSignals.aestheticDefined = true;
@@ -640,15 +657,34 @@ async function extractSemanticSignals(sessionSignals, answer) {
   console.log(`📝 EXTRACTION DEBUG - Answer: "${answer.substring(0, 100)}..."`);
   console.log(`📝 Sentences split (${sentences.length} found):`, sentences);
 
+  // ===== QUESTION OWNERSHIP MAP =====
+  // Each functionalExample key is only written when the current question owns it.
+  // This prevents cross-question contamination (e.g. "power" in failure modes → energyPower).
+  // "interfaces" has no dedicated question (q7_connectivity was removed) so it is unowned
+  // and may be set from any answer that mentions connectivity keywords.
+  const FUNCTIONAL_EXAMPLE_OWNERS = {
+    q4_core_functionality: ["coreFunctionality"],
+    q6_electronics_power:  ["energyPower"],
+    q8_user_interaction:   ["userInteraction", "controlLogic"],
+    q9_size_weight:        [],
+    q10_durability:        ["environmentalProtection"],
+    q14_housing_structure: ["mechanicalStructure"],
+    q25_replaceable_parts: ["modularity"],
+    q27_maintenance:       ["maintenance"],
+    q28_optional_features: ["optionalEnhancements"],
+  };
+
+  const UNOWNED_EXAMPLE_KEYS = new Set(["interfaces"]);
+  const ownedExampleKeys = FUNCTIONAL_EXAMPLE_OWNERS[questionId] || [];
+
   // ===== MULTI-FEATURE SENTENCE DETECTION =====
-  // This block quickly identifies specific feature mentions before scoring
-  
   for (const sentence of sentences) {
     const s = sentence.toLowerCase();
 
     // Energy / Power
     if (
-      (s.includes("battery") || s.includes("charging") || s.includes("power")) &&
+      ownedExampleKeys.includes("energyPower") &&
+      (s.includes("battery") || s.includes("charging") || s.includes("solar") || s.includes("powered by")) &&
       !sessionSignals.functionalExamples.energyPower
     ) {
       sessionSignals.functionalExamples.energyPower = sentence;
@@ -657,6 +693,7 @@ async function extractSemanticSignals(sessionSignals, answer) {
 
     // Control Logic
     if (
+      ownedExampleKeys.includes("controlLogic") &&
       (s.includes("sensor") || s.includes("automatic") || s.includes("algorithm")) &&
       !sessionSignals.functionalExamples.controlLogic
     ) {
@@ -666,6 +703,7 @@ async function extractSemanticSignals(sessionSignals, answer) {
 
     // User Interaction
     if (
+      ownedExampleKeys.includes("userInteraction") &&
       (s.includes("led") || s.includes("display") || s.includes("button")) &&
       !sessionSignals.functionalExamples.userInteraction
     ) {
@@ -673,7 +711,7 @@ async function extractSemanticSignals(sessionSignals, answer) {
       console.log(`✅ QUICK MATCH: userInteraction → "${sentence}"`);
     }
 
-    // Interfaces
+    // Interfaces — unowned, may be set from any answer
     if (
       (s.includes("usb") || s.includes("bluetooth") || s.includes("wifi") || s.includes("port")) &&
       !sessionSignals.functionalExamples.interfaces
@@ -682,9 +720,15 @@ async function extractSemanticSignals(sessionSignals, answer) {
       console.log(`✅ QUICK MATCH: interfaces → "${sentence}"`);
     }
   }
-  
+
+  // ===== EXAMPLE PATTERN SCORING =====
+  // Only writes to keys owned by the current question (or unowned keys like interfaces).
   for (const pattern of examplePatterns) {
-    // Only extract if we haven't already set an example for this feature
+    if (!UNOWNED_EXAMPLE_KEYS.has(pattern.key) && !ownedExampleKeys.includes(pattern.key)) {
+      console.log(`📝 Skipping ${pattern.key} — not owned by ${questionId}`);
+      continue;
+    }
+
     if (sessionSignals.functionalExamples[pattern.key]) {
       console.log(`📝 Skipping ${pattern.key} - already set`);
       continue;
@@ -695,15 +739,10 @@ async function extractSemanticSignals(sessionSignals, answer) {
 
     for (const sentence of sentences) {
       const sentenceLower = sentence.toLowerCase();
-
       let score = 0;
-
       for (const kw of pattern.keywords) {
-        if (sentenceLower.includes(kw)) {
-          score++;
-        }
+        if (sentenceLower.includes(kw)) score++;
       }
-
       if (score > bestScore && sentence.length >= pattern.minLength) {
         bestScore = score;
         bestSentence = sentence;
@@ -745,7 +784,7 @@ async function extractSignals(sessionSignals, questionId, answer) {
   }
   
   // ===== STEP 1: SEMANTIC EXTRACTION (runs for ALL answers) =====
-    await extractSemanticSignals(sessionSignals, answer);
+    await extractSemanticSignals(sessionSignals, answer, questionId);
 
   // ===== 29-QUESTION PRC FLOW (q1_product_and_users – q29_development_stage) =====
 
@@ -818,10 +857,19 @@ async function extractSignals(sessionSignals, questionId, answer) {
       else if (/plug|wall|mains|wired/i.test(text)) sessionSignals.powerSource = "mains";
       else if (/manual|no power|mechanical/i.test(text)) sessionSignals.powerSource = "manual";
     }
-    setFunctionalFeature(sessionSignals, "energyPower", classifyFeatureImportance(text) || "important");
-    ensureFunctionalExamples(sessionSignals);
-    if (!sessionSignals.functionalExamples.energyPower) {
-      sessionSignals.functionalExamples.energyPower = answer.slice(0, 120);
+    // Only track energyPower when electronics are actually present
+    if (sessionSignals.hasElectronics !== false) {
+      setFunctionalFeature(sessionSignals, "energyPower", classifyFeatureImportance(text) || "important");
+      ensureFunctionalExamples(sessionSignals);
+      if (!sessionSignals.functionalExamples.energyPower) {
+        sessionSignals.functionalExamples.energyPower = answer.slice(0, 120);
+      }
+    } else {
+      // Explicitly clear any energyPower values set by earlier semantic extraction
+      ensureFunctionalSignals(sessionSignals);
+      sessionSignals.functionalFeatures.energyPower = null;
+      ensureFunctionalExamples(sessionSignals);
+      sessionSignals.functionalExamples.energyPower = null;
     }
   }
 
@@ -841,9 +889,8 @@ async function extractSignals(sessionSignals, questionId, answer) {
   if (questionId === "q8_user_interaction") {
     setFunctionalFeature(sessionSignals, "userInteraction", classifyFeatureImportance(text) || "required");
     ensureFunctionalExamples(sessionSignals);
-    if (!sessionSignals.functionalExamples.userInteraction) {
-      sessionSignals.functionalExamples.userInteraction = answer.slice(0, 120);
-    }
+    // Always set from the dedicated interaction question — overrides any LLM guess from earlier answers
+    sessionSignals.functionalExamples.userInteraction = answer.slice(0, 120);
     // Control logic inferred if sensors/automation mentioned
     if (/sensor|automat|algorithm|logic|detect/i.test(text)) {
       setFunctionalFeature(sessionSignals, "controlLogic", classifyFeatureImportance(text) || "important");
@@ -855,12 +902,15 @@ async function extractSignals(sessionSignals, questionId, answer) {
 
   // ─── SECTION 4: Physical Design ───────────────────────────────────────────
 
-  if (questionId === "q9_size_weight") {
-    // weightTarget and weightDefined filled first by semantic extraction (regex match)
-    if (!sessionSignals.weightTarget) {
+  if (questionId === WEIGHT_QUESTION_ID) {
+    // Weight question is always authoritative — overwrite any weight captured from earlier answers
+    const q9WeightMatch = text.match(/(?:under|less|below|max|up to)\s*([\d.]+)\s*(kg|grams?|g\b|lbs?|oz)/i);
+    if (q9WeightMatch) {
+      sessionSignals.weightTarget = `${q9WeightMatch[1]} ${q9WeightMatch[2]}`;
+    } else {
       sessionSignals.weightTarget = answer;
-      sessionSignals.weightDefined = true;
     }
+    sessionSignals.weightDefined = true;
     setFunctionalFeature(sessionSignals, "mechanicalStructure", classifyFeatureImportance(text) || "important");
     ensureFunctionalExamples(sessionSignals);
     if (!sessionSignals.functionalExamples.mechanicalStructure) {
@@ -872,9 +922,19 @@ async function extractSignals(sessionSignals, questionId, answer) {
   }
 
   if (questionId === "q10_durability") {
-    if (/\bno\b|not.*waterproof|not.*rugged|indoor only|not.*drop/i.test(text)) {
-      sessionSignals.durabilityNeed = false;
-    } else {
+    const notWaterproof = /\b(not|non)[- ]?(waterproof|water.resistant)/i.test(text);
+    const hasDrop = /\bdrop|impact|scratch|durable|rugged/i.test(text);
+
+    // Strip waterproof from any prior semantic durabilityTarget if user says not waterproof
+    if (notWaterproof && sessionSignals.durabilityTarget) {
+      sessionSignals.durabilityTarget = sessionSignals.durabilityTarget
+        .replace(/\s*and\s*waterproof/i, "")
+        .replace(/waterproof\s*and\s*/i, "")
+        .replace(/^waterproof$/i, "")
+        .trim() || null;
+    }
+
+    if (hasDrop) {
       sessionSignals.durabilityNeed = true;
       if (!sessionSignals.durabilityTarget) sessionSignals.durabilityTarget = answer;
       sessionSignals.durabilityDefined = true;
@@ -883,6 +943,8 @@ async function extractSignals(sessionSignals, questionId, answer) {
       if (!sessionSignals.functionalExamples.environmentalProtection) {
         sessionSignals.functionalExamples.environmentalProtection = answer.slice(0, 120);
       }
+    } else if (!hasDrop && /\bno\b|not.*rugged|indoor only/i.test(text)) {
+      sessionSignals.durabilityNeed = false;
     }
   }
 
@@ -900,15 +962,15 @@ async function extractSignals(sessionSignals, questionId, answer) {
   }
 
   if (questionId === "q13_usage_environment") {
-    if (/outdoor/i.test(text)) {
+    if (/both|indoor.*outdoor|outdoor.*indoor/i.test(text)) {
+      sessionSignals.usageEnvironment = "indoor and outdoor";
+      sessionSignals.environment = "both";
+    } else if (/outdoor/i.test(text)) {
       sessionSignals.usageEnvironment = "outdoor";
       sessionSignals.environment = "outdoor";
     } else if (/indoor/i.test(text)) {
       sessionSignals.usageEnvironment = "indoor";
       sessionSignals.environment = "indoor";
-    } else if (/both|indoor.*outdoor|outdoor.*indoor/i.test(text)) {
-      sessionSignals.usageEnvironment = "indoor and outdoor";
-      sessionSignals.environment = "both";
     } else {
       sessionSignals.usageEnvironment = answer;
     }
@@ -1049,9 +1111,8 @@ async function extractSignals(sessionSignals, questionId, answer) {
     const maintImportance = /\bno\b|none|no maintenance|maintenance.?free/i.test(text) ? "optional" : "important";
     setFunctionalFeature(sessionSignals, "maintenance", maintImportance);
     ensureFunctionalExamples(sessionSignals);
-    if (!sessionSignals.functionalExamples.maintenance) {
-      sessionSignals.functionalExamples.maintenance = answer.slice(0, 120);
-    }
+    // Always set from the dedicated maintenance question — overrides any LLM guess from earlier answers
+    sessionSignals.functionalExamples.maintenance = answer.slice(0, 120);
   }
 
   if (questionId === "q28_optional_features") {
