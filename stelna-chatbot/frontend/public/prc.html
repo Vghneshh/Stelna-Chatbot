@@ -907,26 +907,63 @@ function closeChat() {
   document.getElementById("chatbotPanel").style.display = "none";
 }
 
-function sendMessage() {
-  const input = document.getElementById("chatInput");
+function getPrcSessionId() {
+  let id = localStorage.getItem("sessionId");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("sessionId", id);
+  }
+  return id;
+}
+
+function appendMessage(who, text) {
   const messages = document.getElementById("chatMessages");
-  if (input.value.trim() === "") return;
-
-  const userMsg = document.createElement("p");
-  userMsg.textContent = "You: " + input.value;
-  messages.appendChild(userMsg);
-
-  const botMsg = document.createElement("p");
-  botMsg.textContent = "AI: I'm analyzing your product...";
-  messages.appendChild(botMsg);
-
-  input.value = "";
+  const p = document.createElement("p");
+  p.style.margin = "4px 0";
+  p.innerHTML = `<strong>${who}:</strong> ${text}`;
+  messages.appendChild(p);
   messages.scrollTop = messages.scrollHeight;
+}
+
+async function sendMessage() {
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if (!text) return;
+
+  appendMessage("You", text);
+  input.value = "";
+
+  appendMessage("AI", "Thinking...");
+
+  try {
+    const res = await fetch("http://localhost:5000/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text, sessionId: getPrcSessionId() })
+    });
+    const data = await res.json();
+
+    // Remove "Thinking..." placeholder
+    const messages = document.getElementById("chatMessages");
+    messages.removeChild(messages.lastChild);
+
+    const reply = data.reply || data.message || "No response.";
+    appendMessage("AI", reply);
+  } catch (err) {
+    const messages = document.getElementById("chatMessages");
+    messages.removeChild(messages.lastChild);
+    appendMessage("AI", "⚠️ Could not reach server. Is the backend running?");
+  }
 }
 
 function suggest(text) {
   document.getElementById("chatInput").value = text;
+  document.getElementById("chatInput").focus();
 }
+
+document.getElementById("chatInput").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") sendMessage();
+});
 </script>
 
 <button class="download-btn" onclick="downloadPDF()">Download Report</button>
