@@ -215,46 +215,6 @@
       }
     }
 
-    /* ================= CHATBOT ================= */
-
-    #chatIcon {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      background: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      font-size: 22px;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      z-index: 1000;
-    }
-
-    #chatbotPanel {
-      display: block;
-      margin-bottom: 20px;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0px 4px 12px rgba(0,0,0,0.15);
-    }
-
-    #chatbotPanel iframe {
-      width: 100%;
-      height: 520px;
-      border: none;
-      display: block;
-    }
-
-    canvas {
-      transition: all 0.3s ease;
-    }
-
-    @media print {
-      #chatIcon, #chatbotPanel { display: none !important; }
-    }
   </style>
 </head>
 
@@ -287,11 +247,6 @@
   <div class="left" id="tables"></div>
 
   <div class="right charts-page">
-
-    <!-- CHATBOT (real React chatbot embedded) -->
-    <div id="chatbotPanel">
-      <iframe src="http://localhost:3000" title="AI Manufacturing Advisor"></iframe>
-    </div>
 
     <!-- CHARTS -->
     <canvas id="pie"></canvas>
@@ -865,15 +820,6 @@ function downloadPDF() {
   window.print();
 }
 
-/* ================= CHATBOT ================= */
-
-function openChat() {
-  document.getElementById("chatbotPanel").style.display = "block";
-}
-
-function closeChat() {
-  document.getElementById("chatbotPanel").style.display = "none";
-}
 </script>
 
 <button class="download-btn" onclick="downloadPDF()">Download Report</button>
@@ -893,8 +839,6 @@ function closeChat() {
     </a>
   </p>
 </div>
-
-<button id="chatIcon" onclick="openChat()">💬</button>
 
 </body>
 </html>

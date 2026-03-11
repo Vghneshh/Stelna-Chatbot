@@ -6,12 +6,6 @@ import "./App.css";
 import logo from "./assets/logo.png";
 
 function App() {
-  // If opened directly (not inside prc.html iframe), redirect to the PRC page
-  if (window.self === window.top) {
-    window.location.replace("/prc.html");
-    return null;
-  }
-
   // Generate or retrieve session ID
   const getSessionId = () => {
     let sessionId = localStorage.getItem("sessionId");
