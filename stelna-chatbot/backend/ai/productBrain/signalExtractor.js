@@ -4,6 +4,20 @@
  */
 
 const { generateLLMResponse } = require("../../services/llmService");
+const prcQuestions = require("../prc/prcQuestions");
+
+// Dynamically resolve which question covers weightTarget so this code doesn't
+// break if the question is renamed or reordered.
+const WEIGHT_QUESTION_ID = (prcQuestions.find(
+  q => Array.isArray(q.covers) && q.covers.includes("weightTarget")
+) || {}).id;
+
+/** Locked vocabulary for knowledge-level signals. Use these instead of raw strings. */
+const SIGNAL = {
+  ENOUGH:  "enough",
+  PARTIAL: "partial",
+  UNKNOWN: "unknown"
+};
 
 /**
  * Extract core product signals (product, user, problem, domain) from first answer
@@ -11,51 +25,67 @@ const { generateLLMResponse } = require("../../services/llmService");
  */
 async function extractProductSignals(answer) {
   const prompt = `
-Extract structured product signals from the user's message.
+Extract product signals from this description.
 
 User message:
 "${answer}"
 
-Return ONLY valid JSON with these fields if present:
+Return ONLY JSON.
 
 {
-  "product": "",
-  "user": "",
-  "problem": "",
-  "domain": ""
+ "product": "",
+ "user": "",
+ "problem": "",
+ "domain": "",
+ "hasElectronics": false,
+ "wearable": false,
+ "interaction": "",
+ "environment": ""
 }
 
 Rules:
-- product = the main product/device being built (be specific: "smart water bottle", not just "device")
-- user = target user/customer (elderly people, athletes, students, etc.)
-- problem = the problem it solves (hydration reminder, performance tracking, etc.)
-- domain = product category (IoT, medical, wearable, consumer electronics, health, smart home, etc.)
-
-Be concise. If a field is not mentioned, set it to empty string "".
-Return ONLY the JSON object, no other text.
+- product = specific device (smart watch, water bottle, etc)
+- user = target group
+- problem = main purpose
+- domain = product category
+- hasElectronics = true if smart, IoT, sensor, battery, app etc
+- wearable = true if worn on body
+- interaction = notification/display/app/button etc
+- environment = indoor/outdoor/daily wearable
 `;
 
   try {
     const response = await generateLLMResponse([
-      { role: "system", content: "You extract structured product signals. Return only valid JSON." },
+      { role: "system", content: "Return only JSON." },
       { role: "user", content: prompt }
     ]);
 
-    // Clean response - remove markdown code blocks if present
-    let cleanedResponse = response.trim();
-    if (cleanedResponse.startsWith("```json")) {
-      cleanedResponse = cleanedResponse.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-    } else if (cleanedResponse.startsWith("```")) {
-      cleanedResponse = cleanedResponse.replace(/^```\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(response.trim());
+
+    const text = (answer || "").toLowerCase();
+
+    if (parsed.hasElectronics === undefined) {
+      parsed.hasElectronics =
+        /smart|sensor|bluetooth|wifi|app|electronic|battery/.test(text);
     }
 
-    const parsed = JSON.parse(cleanedResponse);
-    
-    console.log("🔍 Product signal extraction result:", parsed);
+    if (parsed.wearable === undefined) {
+      parsed.wearable =
+        /watch|band|bracelet|wearable/.test(text);
+    }
+
     return parsed;
+
   } catch (err) {
-    console.error("❌ Product signal extraction failed:", err.message);
-    return { product: "", user: "", problem: "", domain: "" };
+    console.error("Signal extraction failed", err);
+    return {
+      product: "",
+      user: "",
+      problem: "",
+      domain: "",
+      hasElectronics: false,
+      wearable: false
+    };
   }
 }
 
@@ -66,16 +96,34 @@ function interpretBinary(answer) {
   const text = (answer || "").toLowerCase();
 
   if (text.includes("yes") || text.includes("have") || text.includes("do")) {
-    return "enough";
+    return SIGNAL.ENOUGH;
   }
   if (text.includes("no") || text.includes("not yet") || text.includes("not")) {
-    return "unknown";
+    return SIGNAL.UNKNOWN;
   }
   if (text.includes("maybe") || text.includes("think") || text.includes("partially")) {
-    return "partial";
+    return SIGNAL.PARTIAL;
   }
 
-  return "partial";
+  return SIGNAL.PARTIAL;
+}
+
+/**
+ * Safe setter for knowledge-level signals.
+ * Accepts "enough" | "partial" | "unknown" directly, or interprets raw answer text.
+ * This guarantees all knowledge signals are normalized — even if interpretBinary()
+ * is forgotten in a future edit.
+ */
+function setSignal(signals, key, value) {
+  if (value === undefined || value === null) {
+    signals[key] = SIGNAL.UNKNOWN;
+    return;
+  }
+  if (value === SIGNAL.ENOUGH || value === SIGNAL.PARTIAL || value === SIGNAL.UNKNOWN) {
+    signals[key] = value;
+    return;
+  }
+  signals[key] = interpretBinary(value);
 }
 
 function ensureFunctionalSignals(sessionSignals) {
@@ -148,14 +196,23 @@ Example:
 function safeMergeSignals(sessionSignals, parsed) {
   if (!parsed || typeof parsed !== "object") return;
 
-  Object.assign(sessionSignals, parsed);
+  // Only write top-level keys when the incoming value is non-empty,
+  // so later LLM calls cannot blank out signals set by question handlers.
+  for (const [key, value] of Object.entries(parsed)) {
+    if (key === "functionalExamples" || key === "functionalFeatures") continue;
+    if (value !== null && value !== undefined && value !== "") {
+      sessionSignals[key] = value;
+    }
+  }
 
   if (parsed.functionalExamples && typeof parsed.functionalExamples === "object") {
     ensureFunctionalExamples(sessionSignals);
-    sessionSignals.functionalExamples = {
-      ...sessionSignals.functionalExamples,
-      ...parsed.functionalExamples
-    };
+    // Only fill empty slots — never overwrite values already set by Q-handlers
+    for (const [key, value] of Object.entries(parsed.functionalExamples)) {
+      if (!sessionSignals.functionalExamples[key] && value) {
+        sessionSignals.functionalExamples[key] = value;
+      }
+    }
   }
 
   if (parsed.functionalFeatures && typeof parsed.functionalFeatures === "object") {
@@ -213,7 +270,7 @@ function hasTerm(text, term) {
 }
 
 function classifyFeatureImportance(text) {
-  const requiredCues = ["must have", "must", "needs to", "need to", "should", "primary function", "essential", "critical"];
+  const requiredCues = ["must have", "must", "needs to", "need to", "primary function", "essential", "critical"];
   const optionalCues = ["nice to have", "optional", "add-on", "addon", "could have", "bonus"];
 
   if (requiredCues.some(cue => text.includes(cue))) return "required";
@@ -237,10 +294,73 @@ function setFunctionalFeature(sessionSignals, key, value) {
 }
 
 /**
+ * Extract functional requirement signals using LLM
+ * Provides structured interpretation of feature examples and importance
+ */
+async function extractFunctionalSignals(answer) {
+  const prompt = `
+Extract functional requirement signals from the message.
+
+User message:
+"${answer}"
+
+Return JSON only.
+
+{
+ "functionalExamples": {
+   "coreFunctionality": "",
+   "energyPower": "",
+   "controlLogic": "",
+   "userInteraction": "",
+   "environmentalProtection": "",
+   "mechanicalStructure": "",
+   "modularity": "",
+   "maintenance": "",
+   "interfaces": "",
+   "optionalEnhancements": ""
+ },
+ "functionalFeatures": {
+   "coreFunctionality": "required|important|optional|null",
+   "energyPower": "required|important|optional|null",
+   "controlLogic": "required|important|optional|null",
+   "userInteraction": "required|important|optional|null",
+   "environmentalProtection": "required|important|optional|null",
+   "mechanicalStructure": "required|important|optional|null",
+   "modularity": "required|important|optional|null",
+   "maintenance": "required|important|optional|null",
+   "interfaces": "required|important|optional|null",
+   "optionalEnhancements": "required|important|optional|null"
+ }
+}
+
+Rules:
+- Extract brief descriptive examples for each feature when mentioned
+- Classify importance: "required" = must have, "important" = should have, "optional" = nice to have
+- Return null for features not mentioned
+- Keep examples concise (under 15 words)
+`;
+
+  try {
+    const response = await generateLLMResponse([
+      { role: "system", content: "Return only valid JSON." },
+      { role: "user", content: prompt }
+    ]);
+
+    const parsed = JSON.parse(response.trim());
+    console.log("✅ LLM functional extraction:", parsed);
+    return parsed;
+
+  } catch (err) {
+    console.warn("⚠️ LLM functional extraction failed, will use keyword fallback:", err.message);
+    return null;
+  }
+}
+
+/**
  * Semantic signal extraction - analyzes ANY answer for signal patterns
  * This runs BEFORE question-specific extraction to catch early insights
  */
-function extractSemanticSignals(sessionSignals, answer) {
+async function extractSemanticSignals(sessionSignals, answer, questionId) {
   if (!sessionSignals || !answer) return;
   
   const text = answer.toLowerCase();
@@ -253,7 +373,7 @@ function extractSemanticSignals(sessionSignals, answer) {
   ];
   const detectedMaterials = materialKeywords.filter(mat => hasTerm(text, mat));
   if (detectedMaterials.length > 0) {
-    sessionSignals.materialsKnowledge = [...new Set(detectedMaterials)].join(", ");
+    sessionSignals.materialsKnowledge = "enough";
   }
 
   const quantityMatch = text.match(/(?:produce|production|batch|plan(?:ning)?(?:\s+to\s+produce)?|quantity|units?)\s*(?:of\s*)?(\d+[\d,\.]*)\s*(units|pcs|pieces)?/i)
@@ -275,13 +395,13 @@ function extractSemanticSignals(sessionSignals, answer) {
     .filter(item => hasTerm(text, item.key))
     .map(item => item.value);
   if (manufacturingDetected.length > 0) {
-    sessionSignals.manufacturingKnowledge = [...new Set(manufacturingDetected)].join(", ");
+    setSignal(sessionSignals, "manufacturingKnowledge", "enough");
   }
 
   const componentHints = ["wireless charging", "battery", "sensor", "pcb", "chip", "display", "usb", "bluetooth"];
   const detectedComponents = componentHints.filter(hint => hasTerm(text, hint));
   if (detectedComponents.length > 0) {
-    sessionSignals.componentsKnowledge = [...new Set(detectedComponents)].join(", ");
+    sessionSignals.componentsKnowledge = "enough";
   }
   
   // ===== USER SIGNALS =====
@@ -311,11 +431,14 @@ function extractSemanticSignals(sessionSignals, answer) {
   }
   
   // ===== ELECTRONICS =====
-  const electronicsKeywords = ["sensor", "battery", "smart", "electronic", "app", "bluetooth", "wifi", "screen", "display", "chip"];
-  if (electronicsKeywords.some(kw => text.includes(kw))) {
-    sessionSignals.electronicsKnowledge = "enough";
-    sessionSignals.connectivity = true;
-    console.log(`🎯 Semantic extraction: electronicsKnowledge="enough", connectivity=true`);
+  // Only run if Q6 hasn't explicitly marked the product as non-electronic
+  if (sessionSignals.hasElectronics !== false) {
+    const electronicsKeywords = ["sensor", "battery", "smart", "electronic", "app", "bluetooth", "wifi", "screen", "display", "chip"];
+    if (electronicsKeywords.some(kw => text.includes(kw))) {
+      sessionSignals.electronicsKnowledge = "enough";
+      sessionSignals.connectivity = true;
+      console.log(`🎯 Semantic extraction: electronicsKnowledge="enough", connectivity=true`);
+    }
   }
   
   // ===== DURABILITY =====
@@ -334,7 +457,8 @@ function extractSemanticSignals(sessionSignals, answer) {
       }
     }
     
-    if (text.includes("waterproof") || text.includes("water resistant")) {
+    if ((text.includes("waterproof") || text.includes("water resistant")) &&
+        !/\b(not|non)[- ]?(waterproof|water.resistant)/i.test(text)) {
       sessionSignals.durabilityTarget = sessionSignals.durabilityTarget 
         ? `${sessionSignals.durabilityTarget} and waterproof`
         : "waterproof";
@@ -343,7 +467,7 @@ function extractSemanticSignals(sessionSignals, answer) {
     if (sessionSignals.durabilityTarget) {
       sessionSignals.durabilityDefined = true;
       if (!sessionSignals.targetSpecClarity) {
-        sessionSignals.targetSpecClarity = sessionSignals.durabilityTarget;
+        sessionSignals.targetSpecClarity = "enough";
       }
     }
     console.log(`🎯 Semantic extraction: durabilityTarget="${sessionSignals.durabilityTarget}", durabilityDefined=${sessionSignals.durabilityDefined}`);
@@ -378,8 +502,10 @@ function extractSemanticSignals(sessionSignals, answer) {
   }
   
   // ===== WEIGHT TARGET =====
-  const weightMatch = text.match(/(?:under|less|below|max|up to)\s*([\d.]+)\s*(kg|g|lbs?|oz)/i);
-  if (weightMatch) {
+  // The dedicated weight question (whichever covers "weightTarget") is always authoritative — see its branch below.
+  // Here we only do a preliminary capture from earlier answers so something is better than nothing.
+  const weightMatch = text.match(/(?:under|less|below|max|up to)\s*([\d.]+)\s*(kg|grams?|g\b|lbs?|oz)/i);
+  if (weightMatch && !sessionSignals.weightTarget && questionId !== WEIGHT_QUESTION_ID) {
     sessionSignals.weightTarget = `${weightMatch[1]} ${weightMatch[2]}`;
     sessionSignals.weightDefined = true;
     console.log(`🎯 Semantic extraction: weightTarget="${sessionSignals.weightTarget}", weightDefined=${sessionSignals.weightDefined}`);
@@ -391,9 +517,16 @@ function extractSemanticSignals(sessionSignals, answer) {
     const aesthetics = ["rugged", "slim", "premium", "modern", "industrial", "minimalist"];
     const detected = aesthetics.filter(a => text.includes(a));
     if (detected.length > 0) {
-      sessionSignals.aestheticTarget = `${detected.join(" / ")} design`;
+      // Only overwrite with specific words if we found something more precise
+      // or if no string value has been established yet
+      if (!sessionSignals.aestheticTarget || sessionSignals.aestheticTarget === true) {
+        sessionSignals.aestheticTarget = `${detected.join(" / ")} design`;
+      }
     } else {
-      sessionSignals.aestheticTarget = true;
+      // Never downgrade a concrete string to the boolean placeholder
+      if (!sessionSignals.aestheticTarget) {
+        sessionSignals.aestheticTarget = true;
+      }
     }
     if (sessionSignals.aestheticTarget && sessionSignals.aestheticTarget !== true) {
       sessionSignals.aestheticDefined = true;
@@ -429,10 +562,10 @@ function extractSemanticSignals(sessionSignals, answer) {
     { key: "userInteraction", keywords: ["button", "display", "screen", "indicator", "touch", "feedback", "notification"] },
     { key: "environmentalProtection", keywords: ["waterproof", "dustproof", "outdoor", "weather", "temperature", "humidity"] },
     { key: "mechanicalStructure", keywords: ["mechanical", "structure", "enclosure", "frame", "mount", "impact", "drop"] },
-    { key: "modularity", keywords: ["modular", "replaceable", "interchangeable", "upgrade", "swappable"] },
-    { key: "maintenance", keywords: ["maintenance", "service", "repair", "clean", "replace", "tool-less"] },
-    { key: "interfaces", keywords: ["usb", "bluetooth", "wifi", "nfc", "api", "integration", "port"] },
-    { key: "optionalEnhancements", keywords: ["nice to have", "optional", "add-on", "addon", "extra", "bonus"] }
+    { key: "modularity", keywords: ["replaceable", "interchangeable", "modular", "swappable", "removable", "filter", "cartridge"] },
+    { key: "maintenance", keywords: ["maintenance", "repair", "clean", "replace", "service", "tool-less", "easy to clean", "easy to service", "upkeep"] },
+    { key: "interfaces", keywords: ["usb", "bluetooth", "wifi", "nfc", "api", "integration", "port", "app", "mobile", "connectivity"] },
+    { key: "optionalEnhancements", keywords: ["cloud", "ai", "smart feature", "ota update", "voice control", "gps tracking", "nice to have", "optional feature", "bonus feature"] }
   ];
 
   for (const feature of featurePatterns) {
@@ -447,12 +580,19 @@ function extractSemanticSignals(sessionSignals, answer) {
   // ===== FUNCTIONAL EXAMPLES - Descriptive feature statements =====
   ensureFunctionalExamples(sessionSignals);
 
+  // ===== LLM-BASED FUNCTIONAL EXTRACTION (primary) =====
+  const llmFunctionalSignals = await extractFunctionalSignals(answer);
+  if (llmFunctionalSignals) {
+    safeMergeSignals(sessionSignals, llmFunctionalSignals);
+    console.log("📊 Merged LLM functional signals into session");
+  }
+
   // Extract examples: Look for descriptive statements about product capabilities/features
   const examplePatterns = [
     // Core functionality: primary purpose, main function, solving a problem
     { 
       key: "coreFunctionality", 
-      keywords: ["protect", "durable", "filter", "monitor", "track", "measure", "detect", "purify", "convert", "make", "build", "design", "create", "product", "shockproof", "survive", "drop"],
+      keywords: ["protect", "durable", "filter", "monitor", "track", "measure", "detect", "purify", "convert", "shockproof", "survive", "drop"],
       minLength: 10
     },
     // Energy/Power features
@@ -492,9 +632,9 @@ function extractSemanticSignals(sessionSignals, answer) {
       minLength: 5
     },
     // Maintenance
-    { 
-      key: "maintenance", 
-      keywords: ["maintenance", "service", "repair", "clean", "replace", "tool-less", "easy", "access"],
+    {
+      key: "maintenance",
+      keywords: ["maintenance", "service", "repair", "clean", "replace", "tool-less", "upkeep", "cleaning", "replacement"],
       minLength: 5
     },
     // Interfaces
@@ -503,10 +643,10 @@ function extractSemanticSignals(sessionSignals, answer) {
       keywords: ["usb", "port", "connector", "bluetooth", "wifi", "nfc", "api", "integration", "charging"],
       minLength: 3
     },
-    // Optional enhancements
-    { 
-      key: "optionalEnhancements", 
-      keywords: ["app", "mobile", "connectivity", "cloud", "sync", "bonus", "optional", "extra"],
+    // Optional enhancements — must be clearly optional, not connectivity/interface keywords
+    {
+      key: "optionalEnhancements",
+      keywords: ["optional", "bonus", "extra", "nice to have", "could include", "future", "upgrade", "ota", "voice", "gps"],
       minLength: 5
     }
   ];
@@ -516,26 +656,102 @@ function extractSemanticSignals(sessionSignals, answer) {
   
   console.log(`📝 EXTRACTION DEBUG - Answer: "${answer.substring(0, 100)}..."`);
   console.log(`📝 Sentences split (${sentences.length} found):`, sentences);
-  
+
+  // ===== QUESTION OWNERSHIP MAP =====
+  // Each functionalExample key is only written when the current question owns it.
+  // This prevents cross-question contamination (e.g. "power" in failure modes → energyPower).
+  // "interfaces" has no dedicated question (q7_connectivity was removed) so it is unowned
+  // and may be set from any answer that mentions connectivity keywords.
+  const FUNCTIONAL_EXAMPLE_OWNERS = {
+    q4_core_functionality: ["coreFunctionality"],
+    q6_electronics_power:  ["energyPower"],
+    q8_user_interaction:   ["userInteraction", "controlLogic"],
+    q9_size_weight:        [],
+    q10_durability:        ["environmentalProtection"],
+    q14_housing_structure: ["mechanicalStructure"],
+    q25_replaceable_parts: ["modularity"],
+    q27_maintenance:       ["maintenance"],
+    q28_optional_features: ["optionalEnhancements"],
+  };
+
+  const UNOWNED_EXAMPLE_KEYS = new Set(["interfaces"]);
+  const ownedExampleKeys = FUNCTIONAL_EXAMPLE_OWNERS[questionId] || [];
+
+  // ===== MULTI-FEATURE SENTENCE DETECTION =====
+  for (const sentence of sentences) {
+    const s = sentence.toLowerCase();
+
+    // Energy / Power
+    if (
+      ownedExampleKeys.includes("energyPower") &&
+      (s.includes("battery") || s.includes("charging") || s.includes("solar") || s.includes("powered by")) &&
+      !sessionSignals.functionalExamples.energyPower
+    ) {
+      sessionSignals.functionalExamples.energyPower = sentence;
+      console.log(`✅ QUICK MATCH: energyPower → "${sentence}"`);
+    }
+
+    // Control Logic
+    if (
+      ownedExampleKeys.includes("controlLogic") &&
+      (s.includes("sensor") || s.includes("automatic") || s.includes("algorithm")) &&
+      !sessionSignals.functionalExamples.controlLogic
+    ) {
+      sessionSignals.functionalExamples.controlLogic = sentence;
+      console.log(`✅ QUICK MATCH: controlLogic → "${sentence}"`);
+    }
+
+    // User Interaction
+    if (
+      ownedExampleKeys.includes("userInteraction") &&
+      (s.includes("led") || s.includes("display") || s.includes("button")) &&
+      !sessionSignals.functionalExamples.userInteraction
+    ) {
+      sessionSignals.functionalExamples.userInteraction = sentence;
+      console.log(`✅ QUICK MATCH: userInteraction → "${sentence}"`);
+    }
+
+    // Interfaces — unowned, may be set from any answer
+    if (
+      (s.includes("usb") || s.includes("bluetooth") || s.includes("wifi") || s.includes("port")) &&
+      !sessionSignals.functionalExamples.interfaces
+    ) {
+      sessionSignals.functionalExamples.interfaces = sentence;
+      console.log(`✅ QUICK MATCH: interfaces → "${sentence}"`);
+    }
+  }
+
+  // ===== EXAMPLE PATTERN SCORING =====
+  // Only writes to keys owned by the current question (or unowned keys like interfaces).
   for (const pattern of examplePatterns) {
-    // Only extract if we haven't already set an example for this feature
+    if (!UNOWNED_EXAMPLE_KEYS.has(pattern.key) && !ownedExampleKeys.includes(pattern.key)) {
+      console.log(`📝 Skipping ${pattern.key} — not owned by ${questionId}`);
+      continue;
+    }
+
     if (sessionSignals.functionalExamples[pattern.key]) {
       console.log(`📝 Skipping ${pattern.key} - already set`);
       continue;
     }
-    
+
+    let bestSentence = null;
+    let bestScore = 0;
+
     for (const sentence of sentences) {
       const sentenceLower = sentence.toLowerCase();
-      
-      // Check if sentence contains relevant keywords
-      const hasKeyword = pattern.keywords.some(kw => sentenceLower.includes(kw));
-      
-      if (hasKeyword && sentence.length >= pattern.minLength) {
-        // Prefer longer, more descriptive sentences
-        sessionSignals.functionalExamples[pattern.key] = sentence;
-        console.log(`✅ EXTRACTED: ${pattern.key} = "${sentence.substring(0, 100)}"`);
-        break; // Move to next pattern
+      let score = 0;
+      for (const kw of pattern.keywords) {
+        if (sentenceLower.includes(kw)) score++;
       }
+      if (score > bestScore && sentence.length >= pattern.minLength) {
+        bestScore = score;
+        bestSentence = sentence;
+      }
+    }
+
+    if (bestSentence && bestScore > 0) {
+      sessionSignals.functionalExamples[pattern.key] = bestSentence;
+      console.log(`✅ BEST MATCH: ${pattern.key} → "${bestSentence}"`);
     }
   }
 }
@@ -568,237 +784,363 @@ async function extractSignals(sessionSignals, questionId, answer) {
   }
   
   // ===== STEP 1: SEMANTIC EXTRACTION (runs for ALL answers) =====
-  // DISABLED: Specs-driven capture for future implementation
-  // extractSemanticSignals(sessionSignals, answer);
+    await extractSemanticSignals(sessionSignals, answer, questionId);
 
-  // ===== SIMPLE ANSWER STORAGE (plain Q&A mode) =====
-  // Store answers by question ID for the 12-question PRC flow
+  // ===== 29-QUESTION PRC FLOW (q1_product_and_users – q29_development_stage) =====
 
-  if (questionId === "q1_product") {
+  // ─── SECTION 1: Product Identity & Context ────────────────────────────────
+
+  if (questionId === "q1_product_and_users") {
     sessionSignals.productOverview = answer;
+    // users and userUnderstanding filled by semantic extraction above
+    // product and domain filled by extractProductSignals (called in prcEngine for Q1)
   }
 
-  if (questionId === "q2_roadmap") {
-    sessionSignals.developmentPlan = interpretBinary(answer);
-  }
-
-  if (questionId === "q3_design") {
-    sessionSignals.designClarity = interpretBinary(answer);
-  }
-
-  if (questionId === "q4_function") {
-    sessionSignals.scienceClarity = interpretBinary(answer);
-  }
-
-  if (questionId === "q5_materials") {
-    sessionSignals.materialsKnowledge = answer;
-  }
-
-  if (questionId === "q6_compliance") {
-    sessionSignals.complianceAwareness = answer;
-  }
-
-  if (questionId === "q7_testing") {
-    sessionSignals.testingStatus = answer;
-  }
-
-  if (questionId === "q8_safety") {
-    sessionSignals.safetyAwareness = interpretBinary(answer);
-  }
-
-  if (questionId === "q9_electronics") {
-    sessionSignals.electronicsKnowledge = interpretBinary(answer);
-  }
-
-  if (questionId === "q10_components") {
-    sessionSignals.componentsKnowledge = answer;
-  }
-
-  if (questionId === "q11_support") {
-    sessionSignals.supportNeeded = answer;
-  }
-
-  if (questionId === "q12_specs") {
-    sessionSignals.targetSpecClarity = answer;
-  }
-
-  // ===== KNOWLEDGE READINESS =====
-  if (questionId === "problem") {
-    sessionSignals.problemClarity = interpretBinary(answer);
-  }
-
-  if (questionId === "users") {
-    sessionSignals.userUnderstanding = interpretBinary(answer);
-  }
-
-  if (questionId === "roadmap") {
-    sessionSignals.developmentPlan = interpretBinary(answer);
-  }
-
-  if (questionId === "design") {
-    sessionSignals.designClarity = interpretBinary(answer);
-  }
-
-  if (questionId === "science") {
-    sessionSignals.scienceClarity = interpretBinary(answer);
-  }
-
-  if (questionId === "materials_knowledge") {
-    sessionSignals.materialsKnowledge = interpretBinary(answer);
-  }
-
-  if (questionId === "manufacturing_knowledge") {
-    sessionSignals.manufacturingKnowledge = interpretBinary(answer);
-  }
-
-  if (questionId === "electronics") {
-    sessionSignals.electronicsKnowledge = interpretBinary(answer);
-  }
-
-  if (questionId === "components") {
-    if (!sessionSignals.componentsKnowledge || sessionSignals.componentsKnowledge === "unknown") {
-      sessionSignals.componentsKnowledge = interpretBinary(answer);
+  if (questionId === "q2_failure_modes") {
+    const hasRisks = /fail|risk|break|fault|error|concern|hazard|issue|danger|leak|overheat|damage|incorrect|inaccurate/i.test(text);
+    sessionSignals.failureModesKnowledge = hasRisks ? SIGNAL.ENOUGH : SIGNAL.PARTIAL;
+    sessionSignals.riskAwareness = sessionSignals.failureModesKnowledge;
+    if (!sessionSignals.safetyAwareness && hasRisks) {
+      sessionSignals.safetyAwareness = SIGNAL.PARTIAL;
     }
   }
 
-  if (questionId === "safety_knowledge") {
-    sessionSignals.safetyAwareness = interpretBinary(answer);
-  }
-
-  if (questionId === "testing_knowledge") {
-    sessionSignals.testingStatus = interpretBinary(answer);
-  }
-
-  if (questionId === "target_specs") {
-    sessionSignals.targetSpecClarity = interpretBinary(answer);
-  }
-
-  // ===== ENVIRONMENT & DURABILITY =====
-  if (questionId === "product_use") {
-    if (text.includes("outdoor")) {
-      sessionSignals.environment = "outdoor";
-      sessionSignals.durabilityNeed = true;
-    } else if (text.includes("indoor")) {
-      sessionSignals.environment = "indoor";
-    } else if (text.includes("both")) {
-      sessionSignals.environment = "both";
-      sessionSignals.durabilityNeed = true;
-    }
-  }
-
-  if (questionId === "durability_need") {
-    if (text.includes("yes") || text.includes("drop") || text.includes("water")) {
-      sessionSignals.durabilityNeed = true;
+  if (questionId === "q3_patent_awareness") {
+    if (/patent|prior art|existing product|similar product|competitor/i.test(text)) {
+      sessionSignals.ipAwareness = SIGNAL.ENOUGH;
+    } else if (/no patent|not aware|don't know|unsure|no idea/i.test(text)) {
+      sessionSignals.ipAwareness = SIGNAL.UNKNOWN;
     } else {
-      sessionSignals.durabilityNeed = false;
+      sessionSignals.ipAwareness = SIGNAL.PARTIAL;
     }
   }
 
-  // ===== POWER SOURCE =====
-  if (questionId === "power_source") {
-    if (text.includes("battery")) {
-      sessionSignals.powerSource = "battery";
-    } else if (text.includes("solar")) {
-      sessionSignals.powerSource = "solar";
-    } else if (text.includes("plug") || text.includes("wall") || text.includes("mains")) {
-      sessionSignals.powerSource = "mains";
-    } else if (text.includes("manual")) {
+  // ─── SECTION 2: Technical Fundamentals ────────────────────────────────────
+
+  if (questionId === "q4_core_functionality") {
+    sessionSignals.coreFunctionalityKnowledge = answer;
+    // Core functionality is inherently required — override any semantic classification
+    setFunctionalFeature(sessionSignals, "coreFunctionality", "required");
+    ensureFunctionalExamples(sessionSignals);
+    if (!sessionSignals.functionalExamples.coreFunctionality) {
+      sessionSignals.functionalExamples.coreFunctionality = answer.slice(0, 120);
+    }
+    // Describing core purpose also signals problem clarity
+    if (!sessionSignals.problemClarity) {
+      sessionSignals.problemClarity = SIGNAL.ENOUGH;
+    }
+  }
+
+  if (questionId === "q5_science_principles") {
+    // A substantive technical description signals "enough" regardless of binary yes/no words
+    const hasTechContent =
+      /principl|physics|engineer|relies|biosensor|technolog|ble\b|bluetooth|wi.?fi|wireless|microcontroller|algorithm|circuit|mechanic|electronic|sensor|optic|chemical|material|force|energy/i.test(text);
+    const hasSubstance = answer.trim().length > 60;
+    sessionSignals.scienceClarity =
+      hasTechContent || hasSubstance ? SIGNAL.ENOUGH : interpretBinary(answer);
+  }
+
+  // ─── SECTION 3: Electronics & Connectivity ────────────────────────────────
+
+  if (questionId === "q6_electronics_power") {
+    setSignal(sessionSignals, "electronicsKnowledge", answer);
+    if (/\bno\b|\bnone\b|not.*electronic|manual only|purely mechanical/i.test(text)) {
       sessionSignals.powerSource = "manual";
+      sessionSignals.hasElectronics = false;
+      // Override any electronics signals set by semantic extraction on earlier answers
+      sessionSignals.electronicsKnowledge = SIGNAL.UNKNOWN;
+      sessionSignals.connectivity = false;
+    } else {
+      sessionSignals.hasElectronics = true;
+      if (/battery/i.test(text)) sessionSignals.powerSource = "battery";
+      else if (/solar/i.test(text)) sessionSignals.powerSource = "solar";
+      else if (/plug|wall|mains|wired/i.test(text)) sessionSignals.powerSource = "mains";
+      else if (/manual|no power|mechanical/i.test(text)) sessionSignals.powerSource = "manual";
+    }
+    // Only track energyPower when electronics are actually present
+    if (sessionSignals.hasElectronics !== false) {
+      setFunctionalFeature(sessionSignals, "energyPower", classifyFeatureImportance(text) || "important");
+      ensureFunctionalExamples(sessionSignals);
+      if (!sessionSignals.functionalExamples.energyPower) {
+        sessionSignals.functionalExamples.energyPower = answer.slice(0, 120);
+      }
+    } else {
+      // Explicitly clear any energyPower values set by earlier semantic extraction
+      ensureFunctionalSignals(sessionSignals);
+      sessionSignals.functionalFeatures.energyPower = null;
+      ensureFunctionalExamples(sessionSignals);
+      sessionSignals.functionalExamples.energyPower = null;
     }
   }
 
-  // ===== CONNECTIVITY =====
-  if (questionId === "connectivity") {
-    if (text.includes("app") || text.includes("bluetooth") || text.includes("wifi") || text.includes("wireless") || text.includes("connected")) {
+  if (questionId === "q7_connectivity") {
+    if (/app|bluetooth|wifi|nfc|wireless|connected|internet/i.test(text)) {
       sessionSignals.connectivity = true;
-    } else if (text.includes("no")) {
+      setFunctionalFeature(sessionSignals, "interfaces", classifyFeatureImportance(text) || "important");
+      ensureFunctionalExamples(sessionSignals);
+      if (!sessionSignals.functionalExamples.interfaces) {
+        sessionSignals.functionalExamples.interfaces = answer.slice(0, 120);
+      }
+    } else if (/\bno\b|not.*connect|standalone|offline/i.test(text)) {
       sessionSignals.connectivity = false;
     }
   }
 
-  // ===== MATERIAL CLARITY =====
-  if (questionId === "materials") {
-    if (text.includes("not") || text.includes("yet") || text.includes("don't know")) {
-      sessionSignals.materialClarity = "unknown";
-    } else if (text.includes("plastic") || text.includes("metal") || text.includes("wood") || text.includes("composite")) {
-      sessionSignals.materialClarity = "known";
+  if (questionId === "q8_user_interaction") {
+    setFunctionalFeature(sessionSignals, "userInteraction", classifyFeatureImportance(text) || "required");
+    ensureFunctionalExamples(sessionSignals);
+    // Always set from the dedicated interaction question — overrides any LLM guess from earlier answers
+    sessionSignals.functionalExamples.userInteraction = answer.slice(0, 120);
+    // Control logic inferred if sensors/automation mentioned
+    if (/sensor|automat|algorithm|logic|detect/i.test(text)) {
+      setFunctionalFeature(sessionSignals, "controlLogic", classifyFeatureImportance(text) || "important");
+      if (!sessionSignals.functionalExamples.controlLogic) {
+        sessionSignals.functionalExamples.controlLogic = answer.slice(0, 120);
+      }
+    }
+  }
+
+  // ─── SECTION 4: Physical Design ───────────────────────────────────────────
+
+  if (questionId === WEIGHT_QUESTION_ID) {
+    // Weight question is always authoritative — overwrite any weight captured from earlier answers
+    const q9WeightMatch = text.match(/(?:under|less|below|max|up to)\s*([\d.]+)\s*(kg|grams?|g\b|lbs?|oz)/i);
+    if (q9WeightMatch) {
+      sessionSignals.weightTarget = `${q9WeightMatch[1]} ${q9WeightMatch[2]}`;
     } else {
-      sessionSignals.materialClarity = "partial";
+      sessionSignals.weightTarget = answer;
+    }
+    sessionSignals.weightDefined = true;
+    setFunctionalFeature(sessionSignals, "mechanicalStructure", classifyFeatureImportance(text) || "important");
+    ensureFunctionalExamples(sessionSignals);
+    if (!sessionSignals.functionalExamples.mechanicalStructure) {
+      sessionSignals.functionalExamples.mechanicalStructure = answer.slice(0, 120);
+    }
+    if (!sessionSignals.targetSpecClarity) {
+      sessionSignals.targetSpecClarity = SIGNAL.ENOUGH;
     }
   }
 
-  // ===== MANUFACTURING CLARITY =====
-  if (questionId === "manufacturing") {
-    if (text.includes("yes") || text.includes("injection") || text.includes("3d") || text.includes("cnc")) {
-      sessionSignals.manufacturingClarity = true;
-    } else if (text.includes("no") || text.includes("not")) {
-      sessionSignals.manufacturingClarity = false;
+  if (questionId === "q10_durability") {
+    const notWaterproof = /\b(not|non)[- ]?(waterproof|water.resistant)/i.test(text);
+    const hasDrop = /\bdrop|impact|scratch|durable|rugged/i.test(text);
+
+    // Strip waterproof from any prior semantic durabilityTarget if user says not waterproof
+    if (notWaterproof && sessionSignals.durabilityTarget) {
+      sessionSignals.durabilityTarget = sessionSignals.durabilityTarget
+        .replace(/\s*and\s*waterproof/i, "")
+        .replace(/waterproof\s*and\s*/i, "")
+        .replace(/^waterproof$/i, "")
+        .trim() || null;
+    }
+
+    if (hasDrop) {
+      sessionSignals.durabilityNeed = true;
+      if (!sessionSignals.durabilityTarget) sessionSignals.durabilityTarget = answer;
+      sessionSignals.durabilityDefined = true;
+      setFunctionalFeature(sessionSignals, "environmentalProtection", classifyFeatureImportance(text) || "important");
+      ensureFunctionalExamples(sessionSignals);
+      if (!sessionSignals.functionalExamples.environmentalProtection) {
+        sessionSignals.functionalExamples.environmentalProtection = answer.slice(0, 120);
+      }
+    } else if (!hasDrop && /\bno\b|not.*rugged|indoor only/i.test(text)) {
+      sessionSignals.durabilityNeed = false;
     }
   }
 
-  // ===== COST AWARENESS =====
-  if (questionId === "cost") {
-    if (text.includes("yes") || text.includes("estimate") || text.includes("budget") || text.includes("rough")) {
-      sessionSignals.costAwareness = true;
-    } else {
-      sessionSignals.costAwareness = false;
+  if (questionId === "q11_materials") {
+    sessionSignals.materialsKnowledge = /not.*sure|don't know|unsure|tbd|unknown/i.test(text)
+      ? SIGNAL.UNKNOWN
+      : SIGNAL.ENOUGH;
+  }
+
+  if (questionId === "q12_aesthetics") {
+    if (!sessionSignals.aestheticTarget || sessionSignals.aestheticTarget === true) {
+      sessionSignals.aestheticTarget = answer;
     }
+    sessionSignals.aestheticDefined = true;
   }
 
-  // ===== PROTOTYPE STATUS =====
-  if (questionId === "prototype") {
-    if (text.includes("yes") || text.includes("built") || text.includes("made")) {
-      sessionSignals.prototypeStatus = "exists";
-    } else {
-      sessionSignals.prototypeStatus = "not started";
-    }
-  }
-
-  // ===== NON-FUNCTIONAL TARGETS =====
-  if (questionId === "weight_goal") {
-    sessionSignals.weightTarget = answer;
-  }
-
-  if (questionId === "durability_goal") {
-    if (text.includes("yes") || text.includes("water") || text.includes("drop") || text.includes("rough")) {
-      sessionSignals.durabilityTarget = true;
-    } else {
-      sessionSignals.durabilityTarget = false;
-    }
-  }
-
-  if (questionId === "safety_goal") {
-    if (text.includes("skin") || text.includes("people") || text.includes("contact") || text.includes("touch")) {
-      sessionSignals.safetyTarget = true;
-    } else {
-      sessionSignals.safetyTarget = false;
-    }
-  }
-
-  if (questionId === "compliance_goal") {
-    if (text.includes("yes") || text.includes("regulated") || text.includes("export")) {
-      sessionSignals.complianceTarget = true;
-    } else {
-      sessionSignals.complianceTarget = false;
-    }
-  }
-
-  if (questionId === "aesthetic_goal") {
-    if (text.includes("yes") || text.includes("important") || text.includes("design")) {
-      sessionSignals.aestheticTarget = true;
-    } else {
-      sessionSignals.aestheticTarget = false;
-    }
-  }
-
-  // ===== USAGE ENVIRONMENT =====
-  if (questionId === "product_use" || questionId === "environment") {
-    if (text.includes("outdoor")) {
-      sessionSignals.usageEnvironment = "outdoor";
-    } else if (text.includes("indoor")) {
-      sessionSignals.usageEnvironment = "indoor";
-    } else if (text.includes("both")) {
+  if (questionId === "q13_usage_environment") {
+    if (/both|indoor.*outdoor|outdoor.*indoor/i.test(text)) {
       sessionSignals.usageEnvironment = "indoor and outdoor";
+      sessionSignals.environment = "both";
+    } else if (/outdoor/i.test(text)) {
+      sessionSignals.usageEnvironment = "outdoor";
+      sessionSignals.environment = "outdoor";
+    } else if (/indoor/i.test(text)) {
+      sessionSignals.usageEnvironment = "indoor";
+      sessionSignals.environment = "indoor";
+    } else {
+      sessionSignals.usageEnvironment = answer;
+    }
+  }
+
+  if (questionId === "q14_housing_structure") {
+    // Asks about housing material and how parts are held together
+    sessionSignals.componentsKnowledge = /not.*sure|don't know|unsure|tbd/i.test(text)
+      ? SIGNAL.UNKNOWN
+      : SIGNAL.ENOUGH;
+    setFunctionalFeature(sessionSignals, "mechanicalStructure", classifyFeatureImportance(text) || "important");
+    ensureFunctionalExamples(sessionSignals);
+    if (!sessionSignals.functionalExamples.mechanicalStructure) {
+      sessionSignals.functionalExamples.mechanicalStructure = answer.slice(0, 120);
+    }
+    // Infer assembly approach from housing description if not already captured
+    if (!sessionSignals.assemblyApproach && /snap|screw|clip|weld|adhere|press.?fit/i.test(text)) {
+      sessionSignals.assemblyApproach = answer;
+    }
+  }
+
+  // ─── SECTION 5: Manufacturing ─────────────────────────────────────────────
+
+  if (questionId === "q15_parts_strategy") {
+    sessionSignals.otsVsCustomParts = answer;
+  }
+
+  if (questionId === "q16_prototype_testing") {
+    setSignal(sessionSignals, "designClarity", answer);
+    setSignal(sessionSignals, "testingStatus", answer);
+    if (/3d print|breadboard|cnc|prototype|mock.?up|model|built|fabricat/i.test(text)) {
+      sessionSignals.prototypeStatus = "exists";
+      sessionSignals.prototypeMethod = answer;
+    } else if (/not yet|haven't|no prototype|not built|concept only/i.test(text)) {
+      sessionSignals.prototypeStatus = "not started";
+    } else {
+      sessionSignals.prototypeStatus = interpretBinary(answer) === SIGNAL.ENOUGH ? "exists" : "not started";
+    }
+  }
+
+  if (questionId === "q17_manufacturing_process") {
+    sessionSignals.manufacturingKnowledge = /injection|cnc|3d print|machining|casting|pcb|assembly|molding|stamping/i.test(text)
+      ? SIGNAL.ENOUGH
+      : SIGNAL.PARTIAL;
+    sessionSignals.manufacturingClarity = sessionSignals.manufacturingKnowledge === SIGNAL.ENOUGH;
+    sessionSignals.manufacturingProcess = answer;
+    setFunctionalFeature(sessionSignals, "mechanicalStructure", classifyFeatureImportance(text) || "required");
+  }
+
+  if (questionId === "q18_tolerances") {
+    sessionSignals.toleranceFitKnowledge = /toleran|fit|clearance|dimension|precision|tight|\+\/\-|mm|micron/i.test(text)
+      ? SIGNAL.ENOUGH
+      : SIGNAL.PARTIAL;
+    sessionSignals.tolerancesConsidered = answer;
+  }
+
+  if (questionId === "q19_assembly") {
+    sessionSignals.assemblyApproach = answer;
+    ensureFunctionalExamples(sessionSignals);
+    if (!sessionSignals.functionalExamples.maintenance) {
+      if (/tool.?less|simple|snap|clip/i.test(text)) {
+        sessionSignals.functionalExamples.maintenance = answer.slice(0, 80);
+      }
+    }
+  }
+
+  // ─── SECTION 6: Safety & Compliance ──────────────────────────────────────
+
+  if (questionId === "q20_safety") {
+    // Content-based detection: describing ANY specific risk means the user is aware of safety
+    // Using interpretBinary here is wrong — words like "non-toxic" contain "not" → UNKNOWN
+    const hasRiskContent = /risk|hazard|danger|toxic|sharp|electric|skin|allergen|burn|cut|leak|chemical|poisonous|biohazard|radiation/i.test(text);
+    const noRisksClaimed = /no risk|no hazard|no safety|none|safe product|completely safe/i.test(text);
+    sessionSignals.safetyAwareness = (!noRisksClaimed && (hasRiskContent || answer.trim().length > 30))
+      ? SIGNAL.ENOUGH
+      : SIGNAL.PARTIAL;
+    if (!sessionSignals.safetyTarget) {
+      sessionSignals.safetyTarget = noRisksClaimed ? false : answer;
+    }
+    if (sessionSignals.safetyTarget && sessionSignals.safetyTarget !== false) {
+      sessionSignals.safetyDefined = true;
+    }
+  }
+
+  if (questionId === "q21_compliance") {
+    setSignal(sessionSignals, "complianceAwareness", answer);
+    if (!sessionSignals.complianceTarget) {
+      sessionSignals.complianceTarget = /\bno\b|none|not.*regulat|not.*certif/i.test(text) ? false : answer;
+    }
+    if (sessionSignals.complianceTarget && sessionSignals.complianceTarget !== false) {
+      sessionSignals.complianceDefined = true;
+    }
+  }
+
+  // ─── SECTION 7: Business & Scale ──────────────────────────────────────────
+
+  if (questionId === "q22_unit_cost") {
+    sessionSignals.costEconomicsKnowledge = /\$|cost|price|budget|unit|estimate|\d+/i.test(text)
+      ? SIGNAL.ENOUGH
+      : SIGNAL.PARTIAL;
+    sessionSignals.costAwareness = sessionSignals.costEconomicsKnowledge === SIGNAL.ENOUGH;
+    if (!sessionSignals.costEstimate) sessionSignals.costEstimate = answer;
+  }
+
+  if (questionId === "q23_production_volume") {
+    sessionSignals.scalabilityKnowledge = /\d+|hundred|thousand|million|batch|volume/i.test(text)
+      ? SIGNAL.ENOUGH
+      : SIGNAL.PARTIAL;
+    if (!sessionSignals.productionQuantity) sessionSignals.productionQuantity = answer;
+  }
+
+  if (questionId === "q24_supply_chain") {
+    sessionSignals.supplyChainKnowledge = /supplier|vendor|source|buy|partner|supply|manufacturer|factory/i.test(text)
+      ? SIGNAL.ENOUGH
+      : SIGNAL.PARTIAL;
+  }
+
+  // ─── SECTION 8: Product Completeness ─────────────────────────────────────
+
+  if (questionId === "q25_replaceable_parts") {
+    const modularImportance = /\bno\b|none|not replaceable|not.*replac/i.test(text) ? "optional" : "important";
+    setFunctionalFeature(sessionSignals, "modularity", modularImportance);
+    ensureFunctionalExamples(sessionSignals);
+    if (!sessionSignals.functionalExamples.modularity) {
+      sessionSignals.functionalExamples.modularity = answer.slice(0, 120);
+    }
+  }
+
+  if (questionId === "q26_critical_parts") {
+    sessionSignals.criticalPartsKnowledge = answer;
+    // If components were unknown, promote to enough since user is naming critical parts
+    if (!sessionSignals.componentsKnowledge || sessionSignals.componentsKnowledge === SIGNAL.UNKNOWN) {
+      sessionSignals.componentsKnowledge = SIGNAL.ENOUGH;
+    }
+  }
+
+  if (questionId === "q27_maintenance") {
+    const maintImportance = /\bno\b|none|no maintenance|maintenance.?free/i.test(text) ? "optional" : "important";
+    setFunctionalFeature(sessionSignals, "maintenance", maintImportance);
+    ensureFunctionalExamples(sessionSignals);
+    // Always set from the dedicated maintenance question — overrides any LLM guess from earlier answers
+    sessionSignals.functionalExamples.maintenance = answer.slice(0, 120);
+  }
+
+  if (questionId === "q28_optional_features") {
+    setFunctionalFeature(sessionSignals, "optionalEnhancements", "optional");
+    ensureFunctionalExamples(sessionSignals);
+    if (!sessionSignals.functionalExamples.optionalEnhancements) {
+      sessionSignals.functionalExamples.optionalEnhancements = answer.slice(0, 120);
+    }
+  }
+
+  // ─── SECTION 9: Development Plan ──────────────────────────────────────────
+
+  if (questionId === "q29_development_stage") {
+    if (/production.?ready|launched|shipping/i.test(text)) {
+      sessionSignals.developmentPlan = SIGNAL.ENOUGH;
+      sessionSignals.designClarity = SIGNAL.ENOUGH;
+    } else if (/pilot|tested prototype|validated/i.test(text)) {
+      sessionSignals.developmentPlan = SIGNAL.ENOUGH;
+      if (!sessionSignals.designClarity) sessionSignals.designClarity = SIGNAL.ENOUGH;
+    } else if (/prototype/i.test(text)) {
+      sessionSignals.developmentPlan = SIGNAL.PARTIAL;
+      if (!sessionSignals.designClarity) sessionSignals.designClarity = SIGNAL.PARTIAL;
+    } else {
+      sessionSignals.developmentPlan = SIGNAL.PARTIAL;
+    }
+    // Listed milestones mean they have a plan
+    if (/milestone|next step|plan|launch|target/i.test(text)) {
+      sessionSignals.developmentPlan = SIGNAL.ENOUGH;
     }
   }
 

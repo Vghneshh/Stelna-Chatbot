@@ -82,9 +82,23 @@ How can I help you today?`,
       }
       else if (res.data.type === "prc_redirect" || (res.data.reply === "__PRC_REDIRECT__" && res.data.prcUrl)) {
         addBotMessage(res.data.message || "Great! Let me take you to the Product Readiness Checklist...");
-        if (res.data.prcAnswers) {
-          localStorage.setItem("prcAnswers", JSON.stringify(res.data.prcAnswers));
-        }
+        
+        console.log("💾 Saving PRC data:", {
+          knowledgeReadiness: res.data.knowledgeReadiness?.length || 0,
+          functionalRequirements: res.data.functionalRequirements?.length || 0,
+          nonFunctionalRequirements: res.data.nonFunctionalRequirements?.length || 0,
+          manufacturingReadiness: res.data.manufacturingReadiness?.length || 0
+        });
+        
+        // Save complete PRC data as single object
+        localStorage.setItem("prcData", JSON.stringify({
+          prcAnswers: res.data.prcAnswers,
+          knowledgeReadiness: res.data.knowledgeReadiness || [],
+          functionalRequirements: res.data.functionalRequirements || [],
+          nonFunctionalRequirements: res.data.nonFunctionalRequirements || [],
+          manufacturingReadiness: res.data.manufacturingReadiness || []
+        }));
+        
         setTimeout(() => {
           window.location.href = res.data.prcUrl;
         }, 1000);
@@ -135,9 +149,22 @@ How can I help you today?`,
       else if (res.data.type === "prc_redirect" || (res.data.reply === "__PRC_REDIRECT__" && res.data.prcUrl)) {
         // Redirect to PRC with collected answers
         addBotMessage(res.data.message || "Great! Let me take you to the Product Readiness Checklist...");
-        if (res.data.prcAnswers) {
-          localStorage.setItem("prcAnswers", JSON.stringify(res.data.prcAnswers));
-        }
+        
+        console.log("💾 Saving PRC data:", {
+          knowledgeReadiness: res.data.knowledgeReadiness?.length || 0,
+          functionalRequirements: res.data.functionalRequirements?.length || 0,
+          nonFunctionalRequirements: res.data.nonFunctionalRequirements?.length || 0,
+          manufacturingReadiness: res.data.manufacturingReadiness?.length || 0
+        });
+        
+        // Save complete PRC data as single object
+        localStorage.setItem("prcData", JSON.stringify({
+          prcAnswers: res.data.prcAnswers,
+          knowledgeReadiness: res.data.knowledgeReadiness || [],
+          functionalRequirements: res.data.functionalRequirements || [],
+          nonFunctionalRequirements: res.data.nonFunctionalRequirements || [],
+          manufacturingReadiness: res.data.manufacturingReadiness || []
+        }));
         
         setTimeout(() => {
           window.location.href = res.data.prcUrl;

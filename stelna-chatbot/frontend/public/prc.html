@@ -151,70 +151,69 @@
     }
 
     .prc-description {
-  margin-top: 16px;
-}
+      margin-top: 16px;
+    }
 
-.prc-description p {
-  font-size: 14px;
-  margin: 6px 0;
-  line-height: 1.5;
-}
+    .prc-description p {
+      font-size: 14px;
+      margin: 6px 0;
+      line-height: 1.5;
+    }
 
-.next-steps {
-  max-width: 700px;
-  margin: 2rem auto;
-  padding: 1.5rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  text-align: center;
-}
+    .next-steps {
+      max-width: 700px;
+      margin: 2rem auto;
+      padding: 1.5rem;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.75rem;
+      text-align: center;
+    }
 
-.next-steps h2 {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-}
+    .next-steps h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
 
-.next-steps p {
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
-}
+    .next-steps p {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
 
-.next-steps a {
-  color: #2563eb;
-  font-weight: 500;
-  text-decoration: none;
-}
+    .next-steps a {
+      color: #2563eb;
+      font-weight: 500;
+      text-decoration: none;
+    }
 
-.next-steps a:hover {
-  text-decoration: underline;
-}
+    .next-steps a:hover {
+      text-decoration: underline;
+    }
 
-/* Responsive */
-@media (min-width: 640px) {
-  .next-steps {
-    padding: 2rem;
-  }
-  .next-steps h2 {
-    font-size: 1.75rem;
-  }
-  .next-steps p {
-    font-size: 1.125rem;
-  }
-}
+    /* Responsive */
+    @media (min-width: 640px) {
+      .next-steps {
+        padding: 2rem;
+      }
+      .next-steps h2 {
+        font-size: 1.75rem;
+      }
+      .next-steps p {
+        font-size: 1.125rem;
+      }
+    }
 
-@media (min-width: 1024px) {
-  .next-steps {
-    padding: 2.5rem;
-  }
-  .next-steps h2 {
-    font-size: 2rem;
-  }
-  .next-steps p {
-    font-size: 1.25rem;
-  }
-}
-
+    @media (min-width: 1024px) {
+      .next-steps {
+        padding: 2.5rem;
+      }
+      .next-steps h2 {
+        font-size: 2rem;
+      }
+      .next-steps p {
+        font-size: 1.25rem;
+      }
+    }
 
   </style>
 </head>
@@ -225,7 +224,8 @@
 
 <div class="page-header">
   <div class="logo-row">
-    <img src="https://static.wixstatic.com/media/44be1a_acffb25edd61401889672e9763e05af1~mv2.png " alt="Stelna Designs Logo">
+    <!-- FIX: removed trailing space from src URL -->
+    <img src="https://static.wixstatic.com/media/44be1a_acffb25edd61401889672e9763e05af1~mv2.png" alt="Stelna Designs Logo">
     <img src="https://bhuve.com/assets/bhuve-horizontal-logo-BG3Rtt8b.png" alt="Bhuve Logo">
   </div>
 
@@ -233,10 +233,11 @@
 
   <button class="download-btn" onclick="downloadPDF()">Download Report</button>
 </div>
+
 <div class="prc-description">
   <p><strong>Know if your product is ready</strong> before you build, spend, or scale.</p>
   <p>Evaluate execution readiness across knowledge, requirements, and manufacturing.</p>
-  <p>Pie & bar charts instantly surface gaps and risks.</p>
+  <p>Pie &amp; bar charts instantly surface gaps and risks.</p>
   <p>Create a clear, shareable readiness report for teams and stakeholders.</p>
 </div>
 
@@ -246,8 +247,11 @@
   <div class="left" id="tables"></div>
 
   <div class="right charts-page">
+
+    <!-- CHARTS -->
     <canvas id="pie"></canvas>
     <canvas id="bar"></canvas>
+
   </div>
 </div>
 
@@ -282,23 +286,24 @@ if (!chatbotAnswers || Object.keys(chatbotAnswers).length === 0) {
 
 const yesNo = (id) => `
 <select ${id ? `id="${id}"` : ''} onchange="recalculate()">
-  <option value="">--</option>
-  <option value="1">Yes</option>
-  <option value="0">No</option>
+  <option value="--">--</option>
+  <option value="Yes">Yes</option>
+  <option value="No">No</option>
 </select>`;
 
 const trueFalse = (id) => `
 <select ${id ? `id="${id}"` : ''} onchange="recalculate()">
-  <option value="">--</option>
-  <option value="1">TRUE</option>
-  <option value="0">FALSE</option>
+  <option value="--">--</option>
+  <option value="TRUE">TRUE</option>
+  <option value="FALSE">FALSE</option>
 </select>`;
 
+/* FIX: each option has a distinct value so scoring can differentiate feature types */
 const featureType = (id) => `
 <select ${id ? `id="${id}"` : ''} onchange="recalculate()">
-  <option value="">--</option>
+  <option value="--">--</option>
   <option value="Core">Core</option>
-  <option value="Secondary">Secondary</option>
+  <option value="Supporting">Supporting</option>
   <option value="Optional">Optional</option>
 </select>`;
 
@@ -320,6 +325,7 @@ const confidence = (id) => `
   <option value="5">5</option>
 </select>`;
 
+/* FIX: id parameter passed through; onchange calls handleKnowledgeChange for auto-expert */
 const knowledgeLevel = (id) => `
 <select ${id ? `id="${id}"` : ''} onchange="handleKnowledgeChange('${id}'); recalculate()">
   <option value="">--</option>
@@ -351,32 +357,30 @@ const functional = {
 
 const nonfunctional = {
   group: "nonfunctional",
-  headers: ["Requirement","Target Specification","Defined?","Validated?","Risk Level"],
+  headers: ["Requirement","Target","Defined?","Validated?","Risk Level"],
   rows: [
-    ["Weight", textArea("< 1 kg"), textArea("e.g. < 200g", "nonfunctional_weight_target"), trueFalse("nonfunctional_weight_defined"), trueFalse("nonfunctional_weight_validated"), risk("nonfunctional_weight_risk")],
-    ["Durability", textArea("Drop-proof & waterproof"), textArea("e.g. drop protection up to 1.5m", "nonfunctional_durability_target"), trueFalse("nonfunctional_durability_defined"), trueFalse("nonfunctional_durability_validated"), risk("nonfunctional_durability_risk")],
-    ["Safety", textArea("Non-toxic materials"), textArea("e.g. skin-safe / non-toxic", "nonfunctional_safety_target"), trueFalse("nonfunctional_safety_defined"), trueFalse("nonfunctional_safety_validated"), risk("nonfunctional_safety_risk")],
-    ["Compliance", textArea("IEC / CE"), textArea("e.g. CE / IEC", "nonfunctional_compliance_target"), trueFalse("nonfunctional_compliance_defined"), trueFalse("nonfunctional_compliance_validated"), risk("nonfunctional_compliance_risk")],
-    ["Aesthetics", textArea("Rugged outdoor look"), textArea("e.g. premium modern design", "nonfunctional_aesthetics_target"), trueFalse("nonfunctional_aesthetics_defined"), trueFalse("nonfunctional_aesthetics_validated"), risk("nonfunctional_aesthetics_risk")],
-    ["Usage Environment", textArea("Indoor / Outdoor"), textArea("e.g. indoor and outdoor", "nonfunctional_usage_environment"), yesNo("nonfunctional_environment_defined"), trueFalse("nonfunctional_environment_validated"), risk("nonfunctional_environment_risk")]
+    ["Weight", textArea("< 1 kg", "nonfunctional_weight_target"), trueFalse("nonfunctional_weight_defined"), trueFalse("nonfunctional_weight_validated"), risk("nonfunctional_weight_risk")],
+    ["Durability", textArea("Drop-proof & waterproof", "nonfunctional_durability_target"), trueFalse("nonfunctional_durability_defined"), trueFalse("nonfunctional_durability_validated"), risk("nonfunctional_durability_risk")],
+    ["Safety", textArea("Non-toxic materials", "nonfunctional_safety_target"), trueFalse("nonfunctional_safety_defined"), trueFalse("nonfunctional_safety_validated"), risk("nonfunctional_safety_risk")],
+    ["Compliance", textArea("IEC / CE", "nonfunctional_compliance_target"), trueFalse("nonfunctional_compliance_defined"), trueFalse("nonfunctional_compliance_validated"), risk("nonfunctional_compliance_risk")],
+    ["Aesthetics", textArea("Rugged outdoor look", "nonfunctional_aesthetics_target"), trueFalse("nonfunctional_aesthetics_defined"), trueFalse("nonfunctional_aesthetics_validated"), risk("nonfunctional_aesthetics_risk")],
+    ["Usage Environment", textArea("e.g. indoor and outdoor", "nonfunctional_usage_target"), trueFalse("nonfunctional_usage_defined"), trueFalse("nonfunctional_usage_validated"), risk("nonfunctional_usage_risk")]
   ]
 };
 
 const manufacturing = {
   group: "manufacturing",
-  headers: ["Area","Status Known?","Vendor Identified?","Cost Estimated?","Confidence (1–5)"],
+  headers: ["Area","Status Known?","Vendor Identified?","Cost Estimated?","Confidence (1\u20135)"],
   rows: [
     ["Manufacturing Process Identified", trueFalse("manufacturing_process_status"), trueFalse("manufacturing_process_vendor"), trueFalse("manufacturing_process_cost"), confidence("manufacturing_process_confidence")],
     ["Material Identified", trueFalse("manufacturing_material_status"), trueFalse("manufacturing_material_vendor"), trueFalse("manufacturing_material_cost"), confidence("manufacturing_material_confidence")],
     ["Prototype Method Known", trueFalse("manufacturing_prototype_status"), trueFalse("manufacturing_prototype_vendor"), trueFalse("manufacturing_prototype_cost"), confidence("manufacturing_prototype_confidence")],
+    ["Off The Shelf vs Custom Parts Known", trueFalse("manufacturing_ots_status"), trueFalse("manufacturing_ots_vendor"), trueFalse("manufacturing_ots_cost"), confidence("manufacturing_ots_confidence")],
+    ["Basic Manufacturing Feasibility Proven", trueFalse("manufacturing_feasibility_status"), trueFalse("manufacturing_feasibility_vendor"), trueFalse("manufacturing_feasibility_cost"), confidence("manufacturing_feasibility_confidence")],
     ["Basic Tolerances Considered", trueFalse("manufacturing_tolerances_status"), trueFalse("manufacturing_tolerances_vendor"), trueFalse("manufacturing_tolerances_cost"), confidence("manufacturing_tolerances_confidence")],
     ["Assembly Approach Thought Through", trueFalse("manufacturing_assembly_status"), trueFalse("manufacturing_assembly_vendor"), trueFalse("manufacturing_assembly_cost"), confidence("manufacturing_assembly_confidence")],
     ["Critical Parts Identified", trueFalse("manufacturing_critical_status"), trueFalse("manufacturing_critical_vendor"), trueFalse("manufacturing_critical_cost"), confidence("manufacturing_critical_confidence")],
-    ["OTS vs Custom Parts Known", trueFalse("manufacturing_ots_status"), trueFalse("manufacturing_ots_vendor"), trueFalse("manufacturing_ots_cost"), confidence("manufacturing_ots_confidence")],
-    ["Rough Cost Awareness", trueFalse("manufacturing_cost_status"), trueFalse("manufacturing_cost_vendor"), trueFalse("manufacturing_cost_cost"), confidence("manufacturing_cost_confidence")],
-    ["Basic Feasibility Proven", trueFalse("manufacturing_feasibility_status"), trueFalse("manufacturing_feasibility_vendor"), trueFalse("manufacturing_feasibility_cost"), confidence("manufacturing_feasibility_confidence")],
-    ["Production Quantity (First Batch)", textArea("e.g. 500 units", "manufacturing_production_quantity"), "", "", ""],
-    ["Target Cost Per Unit", textArea("e.g. $4.50", "manufacturing_cost_target"), "", "", ""]
+    ["Rough Cost Awareness", trueFalse("manufacturing_cost_status"), trueFalse("manufacturing_cost_vendor"), trueFalse("manufacturing_cost_cost"), confidence("manufacturing_cost_confidence")]
   ]
 };
 
@@ -386,76 +390,164 @@ const knowledge = {
   rows: [
     ["Problem Understanding", knowledgeLevel("knowledge_problem"), trueFalse("knowledge_problem_expert")],
     ["User & Context Knowledge", knowledgeLevel("knowledge_user"), trueFalse("knowledge_user_expert")],
+    ["Core Functionality Knowledge", knowledgeLevel("knowledge_core_func"), trueFalse("knowledge_core_func_expert")],
+    ["Science & Engineering Principles", knowledgeLevel("knowledge_science"), trueFalse("knowledge_science_expert")],
     ["Development Roadmap", knowledgeLevel("knowledge_planning"), trueFalse("knowledge_planning_expert")],
     ["Design & Prototyping", knowledgeLevel("knowledge_design"), trueFalse("knowledge_design_expert")],
-    ["Science & Engineering Principles", knowledgeLevel("knowledge_science"), trueFalse("knowledge_science_expert")],
-    ["Materials Knowledge", knowledgeLevel("knowledge_materials"), trueFalse("knowledge_materials_expert")],
     ["Manufacturing Process Knowledge", knowledgeLevel("knowledge_mfg"), trueFalse("knowledge_mfg_expert")],
-    ["Electronics Knowledge", knowledgeLevel("knowledge_electronics"), trueFalse("knowledge_electronics_expert")],
-    ["Components Knowledge", knowledgeLevel("knowledge_components"), trueFalse("knowledge_components_expert")],
+    ["Materials Knowledge", knowledgeLevel("knowledge_materials"), trueFalse("knowledge_materials_expert")],
     ["Safety & Risk Knowledge", knowledgeLevel("knowledge_safety"), trueFalse("knowledge_safety_expert")],
     ["Regulatory & Compliance Knowledge", knowledgeLevel("knowledge_compliance"), trueFalse("knowledge_compliance_expert")],
     ["Testing & Validation Knowledge", knowledgeLevel("knowledge_testing"), trueFalse("knowledge_testing_expert")],
-    ["Target Specifications", knowledgeLevel("knowledge_specs"), trueFalse("knowledge_specs_expert")]
+    ["Failure Modes Knowledge", knowledgeLevel("knowledge_failure"), trueFalse("knowledge_failure_expert")],
+    ["Scalability Knowledge", knowledgeLevel("knowledge_scalability"), trueFalse("knowledge_scalability_expert")],
+    ["IP & Prior Art Awareness", knowledgeLevel("knowledge_ip"), trueFalse("knowledge_ip_expert")],
+    ["Cost & Economics Knowledge", knowledgeLevel("knowledge_cost"), trueFalse("knowledge_cost_expert")]
   ]
 };
 
 /* ================= RENDER ================= */
 
 function renderTable(title, cfg) {
-  let html = `<h2>${title}</h2><table data-group="${cfg.group}"><tr>`;
+  const tableId = cfg.group === "functional"
+    ? " id=\"functional-table\""
+    : cfg.group === "nonfunctional"
+      ? " id=\"non-functional-table\""
+      : "";
+  let html = `<h2>${title}</h2><table${tableId} data-group="${cfg.group}"><tr>`;
   cfg.headers.forEach(h => html += `<th>${h}</th>`);
-  html += `</tr>`;
+  html += `</tr><tbody${cfg.group === "functional" ? " id=\"functionalTableBody\"" : ""}>`;
   cfg.rows.forEach(r => {
     html += `<tr>`;
     r.forEach(c => html += `<td>${c}</td>`);
     html += `</tr>`;
   });
-  html += `</table>`;
+  html += `</tbody></table>`;
   return html;
+}
+
+/* ================= POPULATE TABLES ================= */
+
+function populateKnowledgeReadinessTable(data) {
+  if (!Array.isArray(data) || data.length === 0) return;
+
+  const idMap = {
+    problemUnderstanding:        "knowledge_problem",
+    userContextKnowledge:        "knowledge_user",
+    coreFunctionalityKnowledge:  "knowledge_core_func",
+    developmentRoadmap:          "knowledge_planning",
+    designPrototyping:           "knowledge_design",
+    scienceEngineering:          "knowledge_science",
+    materialsKnowledge:          "knowledge_materials",
+    manufacturingKnowledge:      "knowledge_mfg",
+    safetyRiskKnowledge:         "knowledge_safety",
+    regulatoryCompliance:        "knowledge_compliance",
+    testingValidation:           "knowledge_testing",
+    failureModesKnowledge:       "knowledge_failure",
+    ipAwareness:                 "knowledge_ip",
+    scalabilityKnowledge:        "knowledge_scalability",
+    costEconomicsKnowledge:      "knowledge_cost"
+  };
+
+  data.forEach((item) => {
+    const baseId = idMap[item.id];
+    if (!baseId) return;
+
+    const levelField = document.getElementById(baseId);
+    if (levelField) {
+      levelField.value = item.level === "Know Enough" ? "Know Enough"
+        : item.level === "Know Partially" ? "Know Partially"
+        : "";
+    }
+
+    const expertField = document.getElementById(`${baseId}_expert`);
+    if (expertField) expertField.value = item.help || "";
+  });
+}
+
+function populateFunctionalRequirements(rows) {
+  console.log("populateFunctionalRequirements called with", rows?.length, "rows");
+
+  if (!Array.isArray(rows) || rows.length === 0) return;
+
+  const normalizeYesNo = (v) => {
+    if (v === true || v === "true" || v === 1 || v === "1") return "Yes";
+    if (v === false || v === "false" || v === 0 || v === "0") return "No";
+    if (v === "Yes" || v === "No") return v;
+    return "--";
+  };
+
+  const normalizeTF = (v) => {
+    if (v === true || v === "true" || v === 1 || v === "1") return "TRUE";
+    if (v === false || v === "false" || v === 0 || v === "0") return "FALSE";
+    if (v === "TRUE" || v === "FALSE") return v;
+    return "--";
+  };
+
+  const idMap = [
+    "functional_core",
+    "functional_energy",
+    "functional_control",
+    "functional_interaction",
+    "functional_environment",
+    "functional_mechanical",
+    "functional_modularity",
+    "functional_maintenance",
+    "functional_interfaces",
+    "functional_optional"
+  ];
+
+  rows.forEach((r, i) => {
+    const prefix = idMap[i];
+    if (!prefix) return;
+
+    const exampleEl = document.getElementById(`${prefix}_example`);
+    if (exampleEl && r.example) exampleEl.value = r.example;
+
+    const mustHaveEl = document.getElementById(`${prefix}_musthave`);
+    if (mustHaveEl) mustHaveEl.value = normalizeYesNo(r.mustHave);
+
+    const featureTypeEl = document.getElementById(`${prefix}_featureType`);
+    if (featureTypeEl) featureTypeEl.value = r.featureType || "--";
+
+    const workingEl = document.getElementById(`${prefix}_understanding`);
+    if (workingEl) workingEl.value = normalizeTF(r.understandWorking);
+
+    const designEl = document.getElementById(`${prefix}_design`);
+    if (designEl) designEl.value = normalizeTF(r.designDefined);
+
+    const testedEl = document.getElementById(`${prefix}_tested`);
+    if (testedEl) testedEl.value = normalizeTF(r.tested);
+  });
+
+  recalculate();
+}
+
+// Backward-compatible alias
+function populateFunctionalTable(features) {
+  populateFunctionalRequirements(features);
 }
 
 /* ================= AUTO EXPERT NEED DETECTION ================= */
 
 function autoSetExpertNeed(knowledgeValue) {
-  if (knowledgeValue === "Know Enough") {
-    return "FALSE";
-  }
-
-  if (
-    knowledgeValue === "Know Partially" ||
-    knowledgeValue === "Don't Know"
-  ) {
-    return "TRUE";
-  }
-
-  return "--";
+  if (knowledgeValue === "Know Enough") return "FALSE";
+  if (knowledgeValue === "Know Partially" || knowledgeValue === "Don't Know") return "TRUE";
+  return "";
 }
 
-function handleKnowledgeChange(fieldId) {
-  if (!fieldId) return;
-  
-  const knowledgeDropdown = document.getElementById(fieldId);
+function handleKnowledgeChange(knowledgeFieldId) {
+  const knowledgeDropdown = document.getElementById(knowledgeFieldId);
   if (!knowledgeDropdown) return;
-  
-  const expertFieldId = fieldId + "_expert";
-  const expertDropdown = document.getElementById(expertFieldId);
+
+  const expertDropdown = document.getElementById(`${knowledgeFieldId}_expert`);
   if (!expertDropdown) return;
 
-  const knowledgeValue = knowledgeDropdown.value;
-  const expertValue = autoSetExpertNeed(knowledgeValue);
-  
-  // Convert TRUE/FALSE to dropdown values (1/0)
-  if (expertValue === "TRUE") {
-    expertDropdown.value = "1";
-  } else if (expertValue === "FALSE") {
-    expertDropdown.value = "0";
-  } else {
-    expertDropdown.value = "";
-  }
-  
-  console.log(`⚙️ Auto-set ${expertFieldId}: "${knowledgeValue}" → ${expertValue}`);
+  const expertValue = autoSetExpertNeed(knowledgeDropdown.value);
+  expertDropdown.value = expertValue === "TRUE" ? "TRUE" : expertValue === "FALSE" ? "FALSE" : "";
 }
+
+/* ================= RENDER TABLES ================= */
 
 document.getElementById("tables").innerHTML =
   renderTable("Knowledge Readiness", knowledge) +
@@ -463,48 +555,9 @@ document.getElementById("tables").innerHTML =
   renderTable("Non-Functional Requirements", nonfunctional) +
   renderTable("Manufacturing Readiness", manufacturing);
 
-// ===== Auto-fill from chatbot AFTER DOM is ready =====
-setTimeout(() => {
-  console.log("🔄 Auto-filling PRC with chatbot answers...");
-  console.log("📊 Chatbot answers:", chatbotAnswers);
-  
-  let filledCount = 0;
-  for (const id in chatbotAnswers) {
-    const el = document.getElementById(id);
-    if (el) {
-      const oldValue = el.value;
-      let newValue = chatbotAnswers[id];
-      
-      // Convert backend values to dropdown values (1/0)
-      if (newValue === true || newValue === "TRUE" || newValue === "true" || newValue === "yes" || newValue === "YES") {
-        newValue = "1";
-      } else if (newValue === false || newValue === "FALSE" || newValue === "false" || newValue === "no" || newValue === "NO") {
-        newValue = "0";
-      } else if (newValue === 1 || newValue === 0) {
-        newValue = String(newValue);
-      }
-      
-      el.value = newValue;
-      console.log(`   ✓ Filled ${id}: "${oldValue}" → "${newValue}" (original: "${chatbotAnswers[id]}")`);
-      
-      // If this is a knowledge field, auto-set the expert field
-      if (id.startsWith("knowledge_") && !id.endsWith("_expert") && id !== "knowledge_support") {
-        handleKnowledgeChange(id);
-      }
-      
-      filledCount++;
-    } else {
-      console.log(`   ✗ Element not found: ${id}`);
-    }
-  }
-  
-  console.log(`✅ Auto-fill complete: ${filledCount} fields filled`);
-  recalculate();
-}, 300);
-
 /* ================= CHARTS ================= */
 
-const scores = { functional:0, nonfunctional:0, manufacturing:0, knowledge:0 };
+const scores = { functional: 0, nonfunctional: 0, manufacturing: 0, knowledge: 0 };
 
 const pie = new Chart(document.getElementById("pie"), {
   type: "pie",
@@ -517,27 +570,241 @@ const bar = new Chart(document.getElementById("bar"), {
   options: { scales: { y: { beginAtZero: true } } }
 });
 
+/* ================= LOAD PRC DATA FROM localStorage ================= */
+
+try {
+  const prcDataStr = localStorage.getItem("prcData");
+  if (prcDataStr) {
+    const prcData = JSON.parse(prcDataStr);
+    console.log("Loaded prcData from localStorage:", prcData);
+
+    if (prcData.knowledgeReadiness && prcData.knowledgeReadiness.length > 0) {
+      populateKnowledgeReadinessTable(prcData.knowledgeReadiness);
+    }
+
+    populateFunctionalRequirements(prcData.functionalRequirements || []);
+    populateNonFunctionalTable(prcData.nonFunctionalRequirements || []);
+
+    if (prcData.manufacturingReadiness && prcData.manufacturingReadiness.length > 0) {
+      populateManufacturingTable(prcData.manufacturingReadiness);
+    }
+  } else {
+    console.log("No prcData found in localStorage");
+  }
+} catch (err) {
+  console.error("Error loading PRC data:", err);
+}
+
+/* ================= CHATBOT ANSWER MAPPING ================= */
+
+function mapChatbotAnswersToPRC(answers) {
+  const mapped = {};
+
+  const isPositive = (text) => {
+    if (!text) return false;
+    const positive = ["yes", "have", "done", "created", "designed", "identified", "aware", "know", "familiar"];
+    return positive.some(word => text.toLowerCase().includes(word));
+  };
+
+  if (answers.q1) {
+    mapped.functional_core_example = answers.q1;
+    mapped.knowledge_problem = isPositive(answers.q1) ? "Know Enough" : "Know Partially";
+    mapped.knowledge_user = isPositive(answers.q1) ? "Know Enough" : "Know Partially";
+  }
+
+  if (answers.q2) {
+    mapped.knowledge_science = isPositive(answers.q2) ? "Know Enough" : "Know Partially";
+    mapped.knowledge_design = isPositive(answers.q2) ? "Know Enough" : "Know Partially";
+    mapped.functional_core_design = isPositive(answers.q2) ? "TRUE" : "FALSE";
+  }
+
+  if (answers.q3) {
+    mapped.knowledge_materials = isPositive(answers.q3) ? "Know Enough" : "Know Partially";
+    mapped.knowledge_mfg = isPositive(answers.q3) ? "Know Enough" : "Know Partially";
+    mapped.manufacturing_prototype_status = isPositive(answers.q3) ? "TRUE" : "FALSE";
+  }
+
+  if (answers.q4) {
+    mapped.knowledge_testing = isPositive(answers.q4) ? "Know Enough" : "Know Partially";
+    mapped.functional_core_tested = isPositive(answers.q4) ? "TRUE" : "FALSE";
+    mapped.nonfunctional_durability_defined = isPositive(answers.q4) ? "TRUE" : "FALSE";
+    mapped.nonfunctional_safety_defined = isPositive(answers.q4) ? "TRUE" : "FALSE";
+  }
+
+  if (answers.q5) {
+    mapped.knowledge_mfg = isPositive(answers.q5) ? "Know Enough" : "Know Partially";
+    mapped.manufacturing_process_status = isPositive(answers.q5) ? "TRUE" : "FALSE";
+    mapped.manufacturing_cost_status = isPositive(answers.q5) ? "TRUE" : "FALSE";
+  }
+
+  if (answers.q6) {
+    mapped.knowledge_materials = isPositive(answers.q6) ? "Know Enough" : "Know Partially";
+    mapped.manufacturing_material_status = isPositive(answers.q6) ? "TRUE" : "FALSE";
+    mapped.manufacturing_tolerances_status = isPositive(answers.q6) ? "TRUE" : "FALSE";
+    mapped.nonfunctional_durability_defined = isPositive(answers.q6) ? "TRUE" : "FALSE";
+  }
+
+  if (answers.q7) {
+    mapped.nonfunctional_weight_defined = isPositive(answers.q7) ? "TRUE" : "FALSE";
+    mapped.nonfunctional_compliance_defined = isPositive(answers.q7) ? "TRUE" : "FALSE";
+  }
+
+  if (answers.q8) {
+    mapped.knowledge_electronics = isPositive(answers.q8) ? "Know Enough" : "Know Partially";
+    mapped.knowledge_components = isPositive(answers.q8) ? "Know Enough" : "Know Partially";
+    mapped.manufacturing_critical_status = isPositive(answers.q8) ? "TRUE" : "FALSE";
+  }
+
+  if (answers.q9) {
+    mapped.knowledge_compliance = isPositive(answers.q9) ? "Know Enough" : "Know Partially";
+    mapped.nonfunctional_compliance_defined = isPositive(answers.q9) ? "TRUE" : "FALSE";
+  }
+
+  if (answers.q10) {
+    mapped.knowledge_mfg = isPositive(answers.q10) ? "Know Enough" : "Know Partially";
+    mapped.manufacturing_assembly_status = isPositive(answers.q10) ? "TRUE" : "FALSE";
+    mapped.manufacturing_critical_status = isPositive(answers.q10) ? "TRUE" : "FALSE";
+  }
+
+  if (answers.q11) {
+    const needsHelp = answers.q11.toLowerCase().includes("expert")
+      || answers.q11.toLowerCase().includes("help")
+      || answers.q11.toLowerCase().includes("outsourc");
+    if (needsHelp) {
+      mapped.knowledge_design_expert = "TRUE";
+      mapped.knowledge_mfg_expert = "TRUE";
+      mapped.knowledge_electronics_expert = "TRUE";
+      mapped.knowledge_components_expert = "TRUE";
+      mapped.knowledge_testing_expert = "TRUE";
+    }
+  }
+
+  if (answers.q12) {
+    mapped.knowledge_planning = isPositive(answers.q12) ? "Know Enough" : "Know Partially";
+  }
+
+  return mapped;
+}
+
+// Auto-fill from chatbot answers after DOM is ready
+setTimeout(() => {
+  const mappedAnswers = mapChatbotAnswersToPRC(chatbotAnswers);
+
+  for (const id in mappedAnswers) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.value = mappedAnswers[id];
+
+      if (id.startsWith("knowledge_") && !id.endsWith("_expert")) {
+        handleKnowledgeChange(id);
+      }
+    }
+  }
+
+  recalculate();
+}, 300);
+
+/* ================= POPULATE NON-FUNCTIONAL REQUIREMENTS ================= */
+
+function populateNonFunctionalTable(data) {
+  if (!Array.isArray(data) || data.length === 0) return;
+
+  const categoryMap = {
+    weight:     { target: "nonfunctional_weight_target",       defined: "nonfunctional_weight_defined",       validated: "nonfunctional_weight_validated",       risk: "nonfunctional_weight_risk" },
+    durability: { target: "nonfunctional_durability_target",   defined: "nonfunctional_durability_defined",   validated: "nonfunctional_durability_validated",   risk: "nonfunctional_durability_risk" },
+    safety:     { target: "nonfunctional_safety_target",       defined: "nonfunctional_safety_defined",       validated: "nonfunctional_safety_validated",       risk: "nonfunctional_safety_risk" },
+    compliance: { target: "nonfunctional_compliance_target",   defined: "nonfunctional_compliance_defined",   validated: "nonfunctional_compliance_validated",   risk: "nonfunctional_compliance_risk" },
+    aesthetics: { target: "nonfunctional_aesthetics_target",   defined: "nonfunctional_aesthetics_defined",   validated: "nonfunctional_aesthetics_validated",   risk: "nonfunctional_aesthetics_risk" },
+    usageenvironment: { target: "nonfunctional_usage_target",  defined: "nonfunctional_usage_defined",        validated: "nonfunctional_usage_validated",        risk: "nonfunctional_usage_risk" }
+  };
+
+  data.forEach((item) => {
+    const catKey = (item.category || "").toLowerCase().replace(/\s+/g, "");
+    const ids = categoryMap[catKey];
+    if (!ids) return;
+
+    if (ids.target && item.target && item.target !== "--") {
+      const targetEl = document.getElementById(ids.target);
+      if (targetEl) targetEl.value = item.target;
+    }
+    if (ids.defined && item.defined) {
+      const definedEl = document.getElementById(ids.defined);
+      if (definedEl) definedEl.value = item.defined === "Yes" ? "TRUE" : "FALSE";
+    }
+    if (ids.validated && item.validated) {
+      const validatedEl = document.getElementById(ids.validated);
+      if (validatedEl) validatedEl.value = item.validated === "Yes" ? "TRUE" : "FALSE";
+    }
+    if (ids.risk && item.risk) {
+      const riskEl = document.getElementById(ids.risk);
+      if (riskEl) {
+        const riskMap = { "Low": "2", "Medium": "1", "High": "0" };
+        riskEl.value = riskMap[item.risk] || "";
+      }
+    }
+  });
+}
+
+/* ================= POPULATE MANUFACTURING READINESS ================= */
+
+function populateManufacturingTable(data) {
+  if (!Array.isArray(data) || data.length === 0) return;
+
+  const aspectMap = {
+    manufacturingprocess: "process",
+    materialidentified:   "material",
+    prototypemethod:      "prototype",
+    tolerances:           "tolerances",
+    assemblyapproach:     "assembly",
+    criticalparts:        "critical",
+    otsvscustom:          "ots",
+    roughcost:            "cost",
+    feasibility:          "feasibility"
+  };
+
+  data.forEach((item) => {
+    const aspKey = (item.aspect || "").toLowerCase().replace(/\s+/g, "");
+    const aspect = aspectMap[aspKey];
+    if (!aspect) return;
+
+    const statusEl     = document.getElementById(`manufacturing_${aspect}_status`);
+    const vendorEl     = document.getElementById(`manufacturing_${aspect}_vendor`);
+    const costEl       = document.getElementById(`manufacturing_${aspect}_cost`);
+    const confidenceEl = document.getElementById(`manufacturing_${aspect}_confidence`);
+
+    if (statusEl && item.status)         statusEl.value     = item.status === "Yes" ? "TRUE" : "FALSE";
+    if (vendorEl && item.vendor)         vendorEl.value     = item.vendor === "Yes" ? "TRUE" : "FALSE";
+    if (costEl && item.cost)             costEl.value       = item.cost === "Yes" ? "TRUE" : "FALSE";
+    if (confidenceEl && item.confidence) confidenceEl.value = String(item.confidence);
+  });
+}
+
+/* ================= RECALCULATE SCORES ================= */
+
 function recalculate() {
+  if (typeof pie === "undefined" || typeof bar === "undefined") return;
+
   for (let k in scores) scores[k] = 0;
 
   document.querySelectorAll("table[data-group]").forEach(t => {
     const g = t.dataset.group;
     t.querySelectorAll("select").forEach(s => {
-      if (s.value !== "") {
-        // Convert text values to numeric scores
-        let score = 0;
-        if (s.value === "Know Enough") {
-          score = 2;
-        } else if (s.value === "Know Partially") {
-          score = 1;
-        } else if (s.value === "Don't Know") {
-          score = 0;
-        } else {
-          // Fallback for numeric values (legacy support)
-          score = Number(s.value) || 0;
-        }
-        scores[g] += score;
+      if (s.value === "" || s.value === "--") return;
+      let score = 0;
+      switch (s.value) {
+        case "Know Enough":  score = 2; break;
+        case "Know Partially": score = 1; break;
+        case "Don't Know":   score = 0; break;
+        case "TRUE":         score = 1; break;
+        case "FALSE":        score = 0; break;
+        case "Yes":          score = 1; break;
+        case "No":           score = 0; break;
+        case "Core":         score = 2; break;
+        case "Supporting":   score = 1; break;
+        case "Optional":     score = 0; break;
+        default:             score = Number(s.value) || 0;
       }
+      scores[g] += score;
     });
   });
 
@@ -552,8 +819,12 @@ function recalculate() {
 function downloadPDF() {
   window.print();
 }
+
 </script>
+
 <button class="download-btn" onclick="downloadPDF()">Download Report</button>
+
+<!-- FIX: was className="next-steps" (JSX syntax — invalid in HTML) -->
 <div class="next-steps">
   <h2>What's Next?</h2>
   <p>This assessment helps you see where your product stands.</p>
@@ -568,5 +839,6 @@ function downloadPDF() {
     </a>
   </p>
 </div>
+
 </body>
 </html>
