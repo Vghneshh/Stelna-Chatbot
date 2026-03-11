@@ -214,6 +214,67 @@
         font-size: 1.25rem;
       }
     }
+
+    /* ================= CHATBOT ================= */
+
+    #chatIcon {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+
+    #chatbotPanel {
+      display: none;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0px 4px 12px rgba(0,0,0,0.15);
+      padding: 12px;
+      margin-bottom: 20px;
+    }
+
+    .chatbot-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .chatbot-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #chatMessages {
+      height: 120px;
+      overflow: auto;
+      border: 1px solid #ddd;
+      padding: 6px;
+      font-size: 13px;
+    }
+
+    #chatInput {
+      padding: 6px;
+      font-size: 13px;
+    }
+
+    canvas {
+      transition: all 0.3s ease;
+    }
+
+    @media print {
+      #chatIcon, #chatbotPanel { display: none !important; }
+    }
   </style>
 </head>
 
@@ -246,8 +307,28 @@
   <div class="left" id="tables"></div>
 
   <div class="right charts-page">
+
+    <!-- CHATBOT PANEL -->
+    <div id="chatbotPanel">
+      <div class="chatbot-header">
+        🤖 AI Manufacturing Advisor
+        <button onclick="closeChat()">✕</button>
+      </div>
+      <div class="chatbot-body">
+        <p>Hello! I can help evaluate your product readiness.</p>
+        <button onclick="suggest('Evaluate readiness')">Evaluate readiness</button>
+        <button onclick="suggest('Recommend manufacturing process')">Recommend process</button>
+        <button onclick="suggest('Help choose material')">Material advice</button>
+        <div id="chatMessages"></div>
+        <input id="chatInput" placeholder="Describe your product..." />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
     <canvas id="pie"></canvas>
     <canvas id="bar"></canvas>
+
   </div>
 </div>
 
@@ -815,6 +896,37 @@ function recalculate() {
 function downloadPDF() {
   window.print();
 }
+
+/* ================= CHATBOT ================= */
+
+function openChat() {
+  document.getElementById("chatbotPanel").style.display = "block";
+}
+
+function closeChat() {
+  document.getElementById("chatbotPanel").style.display = "none";
+}
+
+function sendMessage() {
+  const input = document.getElementById("chatInput");
+  const messages = document.getElementById("chatMessages");
+  if (input.value.trim() === "") return;
+
+  const userMsg = document.createElement("p");
+  userMsg.textContent = "You: " + input.value;
+  messages.appendChild(userMsg);
+
+  const botMsg = document.createElement("p");
+  botMsg.textContent = "AI: I'm analyzing your product...";
+  messages.appendChild(botMsg);
+
+  input.value = "";
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function suggest(text) {
+  document.getElementById("chatInput").value = text;
+}
 </script>
 
 <button class="download-btn" onclick="downloadPDF()">Download Report</button>
@@ -834,6 +946,8 @@ function downloadPDF() {
     </a>
   </p>
 </div>
+
+<button id="chatIcon" onclick="openChat()">💬</button>
 
 </body>
 </html>
