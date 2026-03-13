@@ -1,46 +1,30 @@
 function ensureOptionalFeatures(signals) {
   if (!signals) return;
-
   if (!signals.functionalExamples) {
     signals.functionalExamples = {};
   }
-
-  if (!signals.functionalExamples.modularity) {
-    signals.functionalExamples.modularity = "Replaceable filter cartridge";
-  }
-
-  if (!signals.functionalExamples.maintenance) {
-    signals.functionalExamples.maintenance = "Tool-less component replacement";
-  }
-
-  if (!signals.functionalExamples.optionalEnhancements) {
-    signals.functionalExamples.optionalEnhancements = "Mobile app connectivity";
-  }
+  // Only ensure keys exist — no fake defaults
+  if (!signals.functionalExamples.modularity) signals.functionalExamples.modularity = "";
+  if (!signals.functionalExamples.maintenance) signals.functionalExamples.maintenance = "";
+  if (!signals.functionalExamples.optionalEnhancements) signals.functionalExamples.optionalEnhancements = "";
 }
 
 function ensureAllFunctionalRows(signals) {
   if (!signals.functionalExamples) {
     signals.functionalExamples = {};
   }
-
-  const defaults = {
-    coreFunctionality: "Primary product functionality",
-    energyPower: "Battery or wired power",
-    controlLogic: "Automatic or sensor-based control",
-    userInteraction: "Buttons, LEDs, or display",
-    environmentalProtection: "Basic waterproof enclosure",
-    mechanicalStructure: "Product housing and frame",
-    modularity: "Replaceable component module",
-    maintenance: "Easy cleaning or replacement",
-    interfaces: "USB or wireless interface",
-    optionalEnhancements: "Mobile app connectivity"
-  };
-
-  Object.keys(defaults).forEach((key) => {
+  // Only ensure the keys exist — do NOT fill in placeholder text.
+  // Empty slots stay empty so the PRC shows blank instead of fabricated defaults.
+  const keys = [
+    "coreFunctionality", "energyPower", "controlLogic", "userInteraction",
+    "environmentalProtection", "mechanicalStructure", "modularity",
+    "maintenance", "interfaces", "optionalEnhancements"
+  ];
+  for (const key of keys) {
     if (!signals.functionalExamples[key]) {
-      signals.functionalExamples[key] = defaults[key];
+      signals.functionalExamples[key] = "";
     }
-  });
+  }
 }
 
 function mapFeatureType(importance) {
@@ -124,6 +108,9 @@ function mapReadinessFlags(signals, featureKey, extractedExamples) {
         tested: hasFeature ? "FALSE" : "--"
       };
     case "interfaces":
+      if (signals.hasElectronics === false) {
+        return { understandWorking: "--", designDefined: "--", tested: "--" };
+      }
       return {
         understandWorking: signals.connectivity !== undefined ? "TRUE" : (hasFeature ? "FALSE" : "--"),
         designDefined: signals.connectivity === true ? "TRUE" : (hasFeature ? "FALSE" : "--"),
@@ -150,12 +137,18 @@ function mapReadinessFlags(signals, featureKey, extractedExamples) {
   }
 }
 
-function buildFunctionalRequirements(signals = {}, answers = {}) {
+function buildFunctionalRequirements(signals = {}, answers = {}, { partial = false } = {}) {
   // Snapshot which examples were actually extracted BEFORE ensureAllFunctionalRows fills in placeholders.
   // This lets hasFeature distinguish real user-provided examples from default placeholder text.
   const extractedExamples = { ...(signals.functionalExamples || {}) };
 
-  ensureAllFunctionalRows(signals);
+  // Clean __none__ markers (used to block LLM re-filling cleared slots)
+  const clean = (v) => (v === "__none__" ? "" : (v || ""));
+  const cleanFeature = (v) => (v === "__none__" ? null : v);
+
+  if (!partial) {
+    ensureAllFunctionalRows(signals);
+  }
   const examples = signals.functionalExamples || {};
   const features = signals.functionalFeatures || {};
 
@@ -164,72 +157,72 @@ function buildFunctionalRequirements(signals = {}, answers = {}) {
   const rows = [
     {
       feature: "Core Functionality",
-      example: examples.coreFunctionality || "",
-      mustHave: "Yes",
-      featureType: mapFeatureType(features.coreFunctionality) || "Core",
+      example: clean(examples.coreFunctionality),
+      mustHave: partial ? mustHaveLabel(cleanFeature(features.coreFunctionality)) : "Yes",
+      featureType: partial ? mapFeatureType(cleanFeature(features.coreFunctionality)) : (mapFeatureType(cleanFeature(features.coreFunctionality)) || "Core"),
       ...r("coreFunctionality")
     },
     {
       feature: "Energy / Power",
-      example: signals.hasElectronics === false ? (extractedExamples.energyPower || "") : (examples.energyPower || ""),
-      mustHave: signals.hasElectronics === false ? "--" : mustHaveLabel(features.energyPower),
-      featureType: mapFeatureTypeWithCap(features.energyPower, "Supporting"),
+      example: signals.hasElectronics === false ? "" : clean(examples.energyPower),
+      mustHave: signals.hasElectronics === false ? "--" : mustHaveLabel(cleanFeature(features.energyPower)),
+      featureType: signals.hasElectronics === false ? "--" : mapFeatureTypeWithCap(cleanFeature(features.energyPower), "Supporting"),
       ...r("energyPower")
     },
     {
       feature: "Control & Logic",
-      example: signals.hasElectronics === false ? (extractedExamples.controlLogic || "") : (examples.controlLogic || ""),
-      mustHave: signals.hasElectronics === false ? "--" : mustHaveLabel(features.controlLogic),
-      featureType: signals.hasElectronics === false ? "--" : mapFeatureTypeWithCap(features.controlLogic, "Supporting"),
+      example: signals.hasElectronics === false ? "" : clean(examples.controlLogic),
+      mustHave: signals.hasElectronics === false ? "--" : mustHaveLabel(cleanFeature(features.controlLogic)),
+      featureType: signals.hasElectronics === false ? "--" : mapFeatureTypeWithCap(cleanFeature(features.controlLogic), "Supporting"),
       ...r("controlLogic")
     },
     {
       feature: "User Interaction",
-      example: examples.userInteraction || "",
-      mustHave: mustHaveLabel(features.userInteraction),
-      featureType: mapFeatureType(features.userInteraction),
+      example: clean(examples.userInteraction),
+      mustHave: mustHaveLabel(cleanFeature(features.userInteraction)),
+      featureType: mapFeatureType(cleanFeature(features.userInteraction)),
       ...r("userInteraction")
     },
     {
       feature: "Environmental Protection",
-      example: examples.environmentalProtection || "",
-      mustHave: "Yes",
-      featureType: "Core",
+      example: clean(examples.environmentalProtection),
+      mustHave: partial ? mustHaveLabel(cleanFeature(features.environmentalProtection)) : "Yes",
+      featureType: partial ? mapFeatureType(cleanFeature(features.environmentalProtection)) : "Core",
       ...r("environmentalProtection")
     },
     {
       feature: "Mechanical Structure",
-      example: examples.mechanicalStructure || "",
-      mustHave: mustHaveLabel(features.mechanicalStructure),
-      featureType: mapFeatureTypeWithCap(features.mechanicalStructure, "Supporting"),
+      example: clean(examples.mechanicalStructure),
+      mustHave: mustHaveLabel(cleanFeature(features.mechanicalStructure)),
+      featureType: mapFeatureTypeWithCap(cleanFeature(features.mechanicalStructure), "Supporting"),
       ...r("mechanicalStructure")
     },
     {
       feature: "Modularity",
-      example: examples.modularity || "",
-      mustHave: mustHaveLabel(features.modularity),
-      featureType: mapFeatureType(features.modularity),
+      example: clean(examples.modularity),
+      mustHave: mustHaveLabel(cleanFeature(features.modularity)),
+      featureType: mapFeatureType(cleanFeature(features.modularity)),
       ...r("modularity")
     },
     {
       feature: "Maintenance",
-      example: examples.maintenance || "",
-      mustHave: mustHaveLabel(features.maintenance),
-      featureType: mapFeatureTypeWithCap(features.maintenance, "Supporting"),
+      example: clean(examples.maintenance),
+      mustHave: mustHaveLabel(cleanFeature(features.maintenance)),
+      featureType: mapFeatureTypeWithCap(cleanFeature(features.maintenance), "Supporting"),
       ...r("maintenance")
     },
     {
       feature: "Interfaces",
-      example: examples.interfaces || "",
-      mustHave: mustHaveLabel(features.interfaces),
-      featureType: mapFeatureTypeWithCap(features.interfaces, "Supporting"),
+      example: signals.hasElectronics === false ? "" : clean(examples.interfaces),
+      mustHave: signals.hasElectronics === false ? "--" : mustHaveLabel(cleanFeature(features.interfaces)),
+      featureType: signals.hasElectronics === false ? "--" : mapFeatureTypeWithCap(cleanFeature(features.interfaces), "Supporting"),
       ...r("interfaces")
     },
     {
       feature: "Optional Enhancements",
-      example: examples.optionalEnhancements || "",
-      mustHave: mustHaveLabel(features.optionalEnhancements),
-      featureType: mapFeatureType(features.optionalEnhancements) || "Optional",
+      example: clean(examples.optionalEnhancements),
+      mustHave: mustHaveLabel(cleanFeature(features.optionalEnhancements)),
+      featureType: mapFeatureType(cleanFeature(features.optionalEnhancements)) || "Optional",
       ...r("optionalEnhancements")
     }
   ];

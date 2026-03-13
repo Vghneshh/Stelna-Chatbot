@@ -36,7 +36,7 @@ async function handlePRC(session, message) {
 
   if (prcResponse.done) {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const totalQuestions = prcResponse.totalQuestions || 29;
+    const totalQuestions = prcResponse.totalQuestions || 28;
 
     return {
       type: "prc_redirect",
@@ -50,7 +50,7 @@ async function handlePRC(session, message) {
     };
   }
 
-  const totalQuestions = prcResponse.totalQuestions || 29;
+  const totalQuestions = prcResponse.totalQuestions || 28;
   const stageMeta = prcResponse.stageMeta || {
     stage: "knowledge",
     stageNumber: 1,
@@ -61,7 +61,11 @@ async function handlePRC(session, message) {
 
   return {
     type: "prc_question",
-    message: `${prcResponse.botMessage}\n\nStage: ${stageLabel}\nQuestion ${prcResponse.questionNum} of ${totalQuestions}\n\n${prcResponse.question.question}`
+    message: `${prcResponse.botMessage}\n\nStage: ${stageLabel}\nQuestion ${prcResponse.questionNum} of ${totalQuestions}\n\n${prcResponse.question.question}`,
+    knowledgeReadiness: prcResponse.knowledgeReadiness || [],
+    functionalRequirements: prcResponse.functionalRequirements || [],
+    nonFunctionalRequirements: prcResponse.nonFunctionalRequirements || [],
+    manufacturingReadiness: prcResponse.manufacturingReadiness || []
   };
 }
 

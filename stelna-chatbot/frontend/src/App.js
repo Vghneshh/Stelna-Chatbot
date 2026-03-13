@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./App.css";
 import logo from "./assets/logo.png";
+// ...existing code...
 
 function App() {
   // Generate or retrieve session ID
@@ -19,20 +20,27 @@ function App() {
   const [sessionId] = useState(getSessionId());
   const [message, setMessage] = useState("");
   const [showQuickActions, setShowQuickActions] = useState(true);
-  const [chat, setChat] = useState([
-    {
-      type: "bot",
-      text: `Hi 👋 Welcome to Stelna Designs.
-
-I'm here to assist you in planning your product manufacturing.
-
-How can I help you today?`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      showButtons: true
-    }
-  ]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [modeSelected, setModeSelected] = useState(false);
+  const [chat, setChat] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  // ...existing code...
   const bottomRef = useRef(null);
+  const iframeRef = useRef(null);
+
+  // Send PRC data to iframe via postMessage
+  const fillPrcLive = (data) => {
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentWindow) return;
+    iframe.contentWindow.postMessage({
+      type: "prc_fill",
+      knowledgeReadiness: data.knowledgeReadiness || [],
+      functionalRequirements: data.functionalRequirements || [],
+      nonFunctionalRequirements: data.nonFunctionalRequirements || [],
+      manufacturingReadiness: data.manufacturingReadiness || []
+    }, window.location.origin);
+  };
 
   const addBotMessage = (text, options = null) => {
     setChat(prev => [...prev, {
@@ -46,7 +54,7 @@ How can I help you today?`,
   const handleMenuOption = async (option) => {
     // Hide quick action buttons after first click
     setShowQuickActions(false);
-    
+
     // Add user selection as message
     setChat(prev => [...prev, {
       type: "user",
@@ -63,45 +71,28 @@ How can I help you today?`,
       return;
     }
 
-    // For all options, send to backend
+    // For all other options, send to backend
     try {
       const res = await axios.post("http://localhost:5000/chat", {
         message: option,
         sessionId: sessionId
       });
 
-      // Handle different response types (same as sendMessage)
       if (res.data.type === "menu") {
         addBotMessage(res.data.message, res.data.options);
       }
       else if (res.data.type === "prc_start" || res.data.type === "prc_question") {
         addBotMessage(res.data.message, res.data.options);
+        fillPrcLive(res.data);
       }
       else if (res.data.type === "prc_complete") {
         addBotMessage(res.data.message, res.data.options);
       }
       else if (res.data.type === "prc_redirect" || (res.data.reply === "__PRC_REDIRECT__" && res.data.prcUrl)) {
-        addBotMessage(res.data.message || "Great! Let me take you to the Product Readiness Checklist...");
-        
-        console.log("💾 Saving PRC data:", {
-          knowledgeReadiness: res.data.knowledgeReadiness?.length || 0,
-          functionalRequirements: res.data.functionalRequirements?.length || 0,
-          nonFunctionalRequirements: res.data.nonFunctionalRequirements?.length || 0,
-          manufacturingReadiness: res.data.manufacturingReadiness?.length || 0
-        });
-        
-        // Save complete PRC data as single object
-        localStorage.setItem("prcData", JSON.stringify({
-          prcAnswers: res.data.prcAnswers,
-          knowledgeReadiness: res.data.knowledgeReadiness || [],
-          functionalRequirements: res.data.functionalRequirements || [],
-          nonFunctionalRequirements: res.data.nonFunctionalRequirements || [],
-          manufacturingReadiness: res.data.manufacturingReadiness || []
-        }));
-        
-        setTimeout(() => {
-          window.location.href = res.data.prcUrl;
-        }, 1000);
+        fillPrcLive(res.data);
+        setChatOpen(false);
+        setShowModal(true);
+        setTimeout(() => setShowModal(false), 3000);
       }
       else {
         addBotMessage(res.data.reply || res.data.message);
@@ -134,41 +125,21 @@ How can I help you today?`,
         sessionId: sessionId
       });
 
-      // Handle different response types
       if (res.data.type === "menu") {
         addBotMessage(res.data.message, res.data.options);
       }
       else if (res.data.type === "prc_start" || res.data.type === "prc_question") {
-        // PRC conversation flow
         addBotMessage(res.data.message, res.data.options);
+        fillPrcLive(res.data);
       }
       else if (res.data.type === "prc_complete") {
-        // PRC completed - ask if user wants to review
         addBotMessage(res.data.message, res.data.options);
       }
       else if (res.data.type === "prc_redirect" || (res.data.reply === "__PRC_REDIRECT__" && res.data.prcUrl)) {
-        // Redirect to PRC with collected answers
-        addBotMessage(res.data.message || "Great! Let me take you to the Product Readiness Checklist...");
-        
-        console.log("💾 Saving PRC data:", {
-          knowledgeReadiness: res.data.knowledgeReadiness?.length || 0,
-          functionalRequirements: res.data.functionalRequirements?.length || 0,
-          nonFunctionalRequirements: res.data.nonFunctionalRequirements?.length || 0,
-          manufacturingReadiness: res.data.manufacturingReadiness?.length || 0
-        });
-        
-        // Save complete PRC data as single object
-        localStorage.setItem("prcData", JSON.stringify({
-          prcAnswers: res.data.prcAnswers,
-          knowledgeReadiness: res.data.knowledgeReadiness || [],
-          functionalRequirements: res.data.functionalRequirements || [],
-          nonFunctionalRequirements: res.data.nonFunctionalRequirements || [],
-          manufacturingReadiness: res.data.manufacturingReadiness || []
-        }));
-        
-        setTimeout(() => {
-          window.location.href = res.data.prcUrl;
-        }, 1000);
+        fillPrcLive(res.data);
+        setChatOpen(false);
+        setShowModal(true);
+        setTimeout(() => setShowModal(false), 3000);
       }
       else {
         addBotMessage(res.data.reply || res.data.message);
@@ -181,90 +152,134 @@ How can I help you today?`,
     setLoading(false);
   };
 
-  // auto scroll
+  // ...existing code...
+
+  // Auto scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat, loading]);
 
-  return (
-    <div className="app">
-      <div className="chat-container">
+  // Listen for messages from iframe (mode selection, open chatbot)
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === "open_chatbot") {
+        setModeSelected(true);
+        setChatOpen(true);
+        // Add welcome message with buttons when chat opens
+        setChat(prev => {
+          if (prev.length === 0) {
+            return [{
+              type: "bot",
+              text: "Hi 👋 Welcome to BuildWise.AI\n\nI'm here to assist you in planning your product manufacturing.\n\nHow can I help you today?",
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              showButtons: true
+            }];
+          }
+          return prev;
+        });
+      }
+      if (event.data && event.data.type === "mode_selected") {
+        setModeSelected(true);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
-        <div className="chat-header">
-          <div className="header-left">
-            <img src={logo} alt="logo" className="logo" />
-            <span className="title">Stelna Manufacturing Advisor</span>
+  // ...existing code...
+
+  return (
+    <div className="app-wrapper">
+      {/* PRC page fills the entire background */}
+      <iframe
+        ref={iframeRef}
+        src="/prc.html"
+        title="Product Readiness Checklist"
+        className="prc-iframe"
+      />
+
+      {/* ...existing code... */}
+
+      {/* Floating chatbot panel */}
+      {chatOpen && (
+        <div className="chat-panel">
+          <div className="chat-header">
+            <div className="header-left">
+              <img src={logo} alt="logo" className="logo" />
+              <span className="title">BuildWise.AI</span>
+            </div>
+            <button className="chat-close-btn" onClick={() => setChatOpen(false)}>✕</button>
+          </div>
+
+          <div className="chat-body">
+            {chat.map((c, i) => (
+              <div key={i} className={`msg ${c.type}`}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {c.text}
+                </ReactMarkdown>
+                <div className="time">{c.time}</div>
+
+                {/* Show quick action buttons on welcome message */}
+                {c.showButtons && showQuickActions && (
+                  <div className="menu-options welcome-options">
+                    <button className="menu-btn" onClick={() => handleMenuOption("Check Product Readiness")}>
+                      Check Product Readiness
+                    </button>
+                    <button className="menu-btn" onClick={() => handleMenuOption("Get Manufacturing Guidance")}>
+                      Get Manufacturing Guidance
+                    </button>
+                  </div>
+                )}
+
+                {/* Render dynamic menu options from backend responses */}
+                {c.menuOptions && (
+                  <div className="menu-options">
+                    {c.menuOptions.map((opt, idx) => (
+                      <button
+                        key={idx}
+                        className="menu-btn"
+                        onClick={() => handleMenuOption(opt)}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {loading && (
+              <div className="msg bot typing">
+                <span className="dot"></span>
+                <span className="dot"></span>
+                <span className="dot"></span>
+              </div>
+            )}
+
+            <div ref={bottomRef}></div>
+          </div>
+
+          <div className="chat-input">
+            <input
+              value={message}
+              placeholder="Describe your product..."
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            />
+            <button onClick={sendMessage}>Send</button>
           </div>
         </div>
+      )}
 
-        <div className="chat-body">
-          {chat.map((c, i) => (
-            <div key={i} className={`msg ${c.type}`}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {c.text}
-              </ReactMarkdown>
-              <div className="time">{c.time}</div>
-              
-              {/* Show quick action buttons only on first message and if not clicked yet */}
-              {c.showButtons && showQuickActions && (
-                <div className="menu-options">
-                  <button className="menu-btn" onClick={() => handleMenuOption("Manufacturing Advice")}>
-                    Manufacturing Advice
-                  </button>
-                  <button className="menu-btn" onClick={() => handleMenuOption("Design Support")}>
-                    Design Support
-                  </button>
-                  <button className="menu-btn" onClick={() => handleMenuOption("Check Product Readiness")}>
-                    Check Product Readiness
-                  </button>
-                  <button className="menu-btn" onClick={() => handleMenuOption("Material Selection")}>
-                    Material Selection
-                  </button>
-                  <button className="menu-btn" onClick={() => handleMenuOption("Process Selection")}>
-                    Process Selection
-                  </button>
-                </div>
-              )}
-              
-              {/* Render dynamic menu options from backend responses */}
-              {c.menuOptions && (
-                <div className="menu-options">
-                  {c.menuOptions.map((opt, idx) => (
-                    <button 
-                      key={idx} 
-                      className="menu-btn"
-                      onClick={() => handleMenuOption(opt)}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-
-          {loading && (
-  <div className="msg bot typing">
-    <span className="dot"></span>
-    <span className="dot"></span>
-    <span className="dot"></span>
-  </div>
-)}
-
-          <div ref={bottomRef}></div>
+      {/* Completion modal popup */}
+      {showModal && (
+        <div className="completion-overlay">
+          <div className="completion-modal">
+            <h2>Assessment Complete</h2>
+            <p>Let me take you to your Product Readiness Checklist.</p>
+          </div>
         </div>
-
-        <div className="chat-input">
-          <input
-            value={message}
-            placeholder="Describe your product..."
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          />
-          <button onClick={sendMessage}>Send</button>
-        </div>
-
-      </div>
+      )}
     </div>
   );
 }

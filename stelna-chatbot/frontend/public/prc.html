@@ -3,6 +3,7 @@
 <head>
   <title>Product Readiness Checklist</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 
   <style>
     body {
@@ -215,10 +216,385 @@
       }
     }
 
+    /* ================= MODE POPUP ================= */
+
+    .popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .popup-card {
+      background: #fff;
+      padding: 36px 40px;
+      border-radius: 10px;
+      max-width: 640px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      border: 1px solid #e5e7eb;
+    }
+
+    .popup-card h2 {
+      margin: 0 0 6px 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1f2937;
+      letter-spacing: -0.01em;
+    }
+
+    .popup-gif {
+      text-align: center;
+      margin: 12px 0;
+    }
+
+    .popup-gif img {
+      width: 110px;
+      height: 110px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+
+    .popup-description {
+      margin: 8px 0 28px 0;
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    .mode-container {
+      display: flex;
+      gap: 16px;
+    }
+
+    .mode-card {
+      flex: 1;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 22px 20px;
+      text-align: left;
+      transition: border-color 0.15s ease;
+    }
+
+    .mode-card:hover {
+      border-color: #cbd5e1;
+    }
+
+    .mode-card h3 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .mode-card p {
+      font-size: 13px;
+      color: #6b7280;
+      margin: 0 0 18px 0;
+      line-height: 1.55;
+    }
+
+    .manual-btn,
+    .chatbot-btn {
+      display: block;
+      width: 100%;
+      padding: 9px 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .manual-btn {
+      background: #1f2937;
+      color: #fff;
+      border-color: #1f2937;
+    }
+
+    .manual-btn:hover {
+      background: #374151;
+      border-color: #374151;
+    }
+
+    .chatbot-btn {
+      background: #1f2937;
+      color: #fff;
+      border-color: #1f2937;
+    }
+
+    .chatbot-btn:hover {
+      background: #374151;
+      border-color: #374151;
+    }
+
+    #prcContent {
+      display: none;
+    }
+
+    /* ================= AI ASSISTANT FLOAT ================= */
+
+    #aiAssistant {
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      z-index: 1000;
+    }
+
+    #assistantBubble {
+      position: absolute;
+      bottom: 100%;
+      right: 0;
+      margin-bottom: 8px;
+      background: #1f2937;
+      padding: 8px 12px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      font-size: 15px;
+      width: 200px;
+      text-align: center;
+      color: #ffffff;
+      white-space: normal;
+    }
+
+    #typingText::after {
+      content: "|";
+      display: inline-block;
+      width: 0;
+      overflow: hidden;
+      vertical-align: baseline;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    #assistantBot {
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    #assistantBot:hover {
+      transform: scale(1.1);
+    }
+
+    @media (max-width: 600px) {
+      .mode-container {
+        flex-direction: column;
+      }
+
+      .popup-card {
+        margin: 16px;
+        padding: 24px 20px;
+      }
+    }
+
+    /* ================= USER DETAILS POPUP ================= */
+
+    .user-popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+    }
+
+    .user-popup-card {
+      background: #fff;
+      padding: 36px 40px;
+      border-radius: 12px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .user-popup-icon {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .user-popup-card h2 {
+      margin: 0 0 8px 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1f2937;
+      text-align: center;
+    }
+
+    .user-popup-card .user-popup-desc {
+      margin: 0 0 24px 0;
+      font-size: 14px;
+      color: #4b5563;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .user-popup-card .form-group {
+      margin-bottom: 16px;
+    }
+
+    .user-popup-card label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #1f2937;
+      margin-bottom: 6px;
+    }
+
+    .user-popup-card input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    .user-popup-card input::placeholder {
+      color: #6b7280;
+    }
+
+    .user-popup-card input:focus {
+      border-color: #1f2937;
+    }
+
+    .user-popup-card input.input-error {
+      border-color: #ef4444;
+    }
+
+    .user-popup-card .error-text {
+      font-size: 12px;
+      color: #ef4444;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .start-assessment-btn {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      margin-top: 24px;
+      background: #1f2937;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .start-assessment-btn:hover {
+      background: #374151;
+    }
+
+    @media (max-width: 600px) {
+      .user-popup-card {
+        margin: 16px;
+        padding: 24px 20px;
+      }
+    }
+
   </style>
 </head>
 
 <body>
+
+<!-- ================= USER DETAILS POPUP ================= -->
+
+<div id="userDetailsPopup" class="user-popup-overlay">
+  <div class="user-popup-card">
+    <div class="user-popup-icon">
+      <lottie-player
+        src="https://assets9.lottiefiles.com/packages/lf20_xyadoh9h.json"
+        background="transparent"
+        speed="1"
+        style="width: 90px; height: 90px;"
+        loop
+        autoplay>
+      </lottie-player>
+    </div>
+    <h2>Before we begin</h2>
+    <p class="user-popup-desc">
+      To generate your Product Readiness Checklist and share the results with you, please provide a few details.
+    </p>
+    <form id="userDetailsForm" novalidate>
+      <div class="form-group">
+        <label for="userName">Full Name</label>
+        <input type="text" id="userName" placeholder="e.g. John Smith" autocomplete="name">
+        <div class="error-text" id="userNameError">Full name is required.</div>
+      </div>
+      <div class="form-group">
+        <label for="userEmail">Email Address</label>
+        <input type="email" id="userEmail" placeholder="e.g. john@example.com" autocomplete="email">
+        <div class="error-text" id="userEmailError">Please enter a valid email address.</div>
+      </div>
+      <button type="submit" class="start-assessment-btn">Start Assessment</button>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODE SELECTION POPUP ================= -->
+
+<div id="modePopup" class="popup-overlay" style="display:none">
+  <div class="popup-card">
+    <h2>Product Readiness Assessment</h2>
+    <p class="popup-description">
+      Choose how you would like to evaluate your product readiness.
+      You can complete the checklist manually or let our AI assistant
+      guide you through the process step-by-step.
+    </p>
+    <div class="mode-container">
+      <div class="mode-card">
+        <h3>Manual Mode</h3>
+        <p>
+          Complete the Product Readiness Checklist yourself and
+          instantly see gaps in knowledge, requirements, and manufacturing.
+        </p>
+        <div class="popup-gif">
+          <img src="https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3dno1bDJqdHU5OTI2aDh3MmtuZ3k0bzU1b2k0MXh6Y2E0eXRxaXhzMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/OeYKA7rF0bBPYPMuZs/giphy.gif" alt="Manual Mode">
+        </div>
+        <button class="manual-btn" onclick="startManual()">
+          Start Manual Assessment
+        </button>
+      </div>
+      <div class="mode-card">
+        <h3>AI Chatbot Mode</h3>
+        <p>
+          Answer guided questions from our AI assistant and automatically
+          generate your Product Readiness Checklist.
+        </p>
+        <div class="popup-gif">
+          <img src="https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3dno1bDJqdHU5OTI2aDh3MmtuZ3k0bzU1b2k0MXh6Y2E0eXRxaXhzMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/QDjpIL6oNCVZ4qzGs7/giphy.gif" alt="AI Assistant">
+        </div>
+        <button class="chatbot-btn" onclick="startChatbot()">
+          Start with AI Assistant
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ================= HEADER ================= -->
 
@@ -243,7 +619,7 @@
 
 <!-- ================= CONTENT ================= -->
 
-<div class="layout">
+<div id="prcContent" class="layout">
   <div class="left" id="tables"></div>
 
   <div class="right charts-page">
@@ -256,13 +632,83 @@
 </div>
 
 <script>
-// ===== Read chatbot answers from URL =====
+// ===== Only auto-fill when redirected by chatbot, not when loaded as iframe =====
+const isInIframe = window.self !== window.top;
+
+/* ================= USER DETAILS FORM (registered first to avoid script errors blocking it) ================= */
+
+(function() {
+  var form = document.getElementById("userDetailsForm");
+  if (!form) return;
+
+  form.addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    var nameInput  = document.getElementById("userName");
+    var emailInput = document.getElementById("userEmail");
+
+    var nameError  = document.getElementById("userNameError");
+    var emailError = document.getElementById("userEmailError");
+
+    var valid = true;
+
+    // Reset
+    nameInput.classList.remove("input-error");
+    emailInput.classList.remove("input-error");
+    nameError.style.display  = "none";
+    emailError.style.display = "none";
+
+    // Full Name
+    if (nameInput.value.trim() === "") {
+      nameInput.classList.add("input-error");
+      nameError.style.display = "block";
+      valid = false;
+    }
+
+    // Email
+    var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(emailInput.value.trim())) {
+      emailInput.classList.add("input-error");
+      emailError.style.display = "block";
+      valid = false;
+    }
+
+    if (!valid) return;
+
+    // Store user details
+    var userDetails = {
+      fullName: nameInput.value.trim(),
+      email:    emailInput.value.trim()
+    };
+
+    try {
+      localStorage.setItem("prcUserDetails", JSON.stringify(userDetails));
+    } catch (err) {
+      console.log("Could not save user details to localStorage");
+    }
+
+    // Save to Firebase via backend
+    fetch("http://localhost:5000/user-details", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userDetails)
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) { console.log("User details saved:", data); })
+    .catch(function(err) { console.log("Could not save user details to server:", err); });
+
+    // Close user details popup, show mode selection popup
+    document.getElementById("userDetailsPopup").style.display = "none";
+    document.getElementById("modePopup").style.display = "flex";
+  });
+})();
+
 const params = new URLSearchParams(window.location.search);
 const answersParam = params.get("answers");
 
 let chatbotAnswers = {};
 
-if (answersParam) {
+if (!isInIframe && answersParam) {
   try {
     chatbotAnswers = JSON.parse(decodeURIComponent(answersParam));
   } catch (err) {
@@ -270,7 +716,7 @@ if (answersParam) {
   }
 }
 
-if (!chatbotAnswers || Object.keys(chatbotAnswers).length === 0) {
+if (!isInIframe && (!chatbotAnswers || Object.keys(chatbotAnswers).length === 0)) {
   try {
     const savedAnswers = localStorage.getItem("prcAnswers");
     if (savedAnswers) {
@@ -498,6 +944,7 @@ function populateFunctionalRequirements(rows) {
   ];
 
   rows.forEach((r, i) => {
+    if (!r) return; // skip null entries (no real data for this row)
     const prefix = idMap[i];
     if (!prefix) return;
 
@@ -570,8 +1017,9 @@ const bar = new Chart(document.getElementById("bar"), {
   options: { scales: { y: { beginAtZero: true } } }
 });
 
-/* ================= LOAD PRC DATA FROM localStorage ================= */
+/* ================= LOAD PRC DATA FROM localStorage (only when not in iframe) ================= */
 
+if (!isInIframe) {
 try {
   const prcDataStr = localStorage.getItem("prcData");
   if (prcDataStr) {
@@ -593,6 +1041,7 @@ try {
   }
 } catch (err) {
   console.error("Error loading PRC data:", err);
+}
 }
 
 /* ================= CHATBOT ANSWER MAPPING ================= */
@@ -686,7 +1135,8 @@ function mapChatbotAnswersToPRC(answers) {
   return mapped;
 }
 
-// Auto-fill from chatbot answers after DOM is ready
+// Auto-fill from chatbot answers after DOM is ready (only when not in iframe)
+if (!isInIframe) {
 setTimeout(() => {
   const mappedAnswers = mapChatbotAnswersToPRC(chatbotAnswers);
 
@@ -703,6 +1153,7 @@ setTimeout(() => {
 
   recalculate();
 }, 300);
+}
 
 /* ================= POPULATE NON-FUNCTIONAL REQUIREMENTS ================= */
 
@@ -820,6 +1271,85 @@ function downloadPDF() {
   window.print();
 }
 
+/* ================= MODE SELECT ================= */
+
+function showAssistant() {
+  document.getElementById("aiAssistant").style.display = "flex";
+  typeText();
+}
+
+var assistantMessage = "Hi! I can help you fill the checklist.";
+var charIndex = 0;
+
+function typeText() {
+  var element = document.getElementById("typingText");
+  if (!element) return;
+  if (charIndex < assistantMessage.length) {
+    element.textContent += assistantMessage.charAt(charIndex);
+    charIndex++;
+    setTimeout(typeText, 40);
+  }
+}
+
+function openChat() {
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: "open_chatbot" }, "*");
+  }
+}
+
+function startManual() {
+  document.getElementById("modePopup").style.display = "none";
+  document.getElementById("prcContent").style.display = "flex";
+  showAssistant();
+  // Tell the parent (App.js) that a mode was selected so the chat icon can appear
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: "mode_selected" }, "*");
+  }
+}
+
+function startChatbot() {
+  document.getElementById("modePopup").style.display = "none";
+  document.getElementById("prcContent").style.display = "flex";
+  showAssistant();
+  // Tell the parent (App.js) to open the chatbot panel
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: "open_chatbot" }, "*");
+  }
+}
+
+/* ================= LIVE FILL VIA postMessage ================= */
+
+window.addEventListener("message", function(event) {
+  if (event.data && event.data.type === "prc_fill") {
+    // Auto-dismiss the mode popup if still showing
+    var popup = document.getElementById("modePopup");
+    if (popup) popup.style.display = "none";
+    var userPopup = document.getElementById("userDetailsPopup");
+    if (userPopup) userPopup.style.display = "none";
+    document.getElementById("prcContent").style.display = "flex";
+    // Show the AI assistant if not already visible
+    var assistant = document.getElementById("aiAssistant");
+    if (assistant && assistant.style.display === "none") showAssistant();
+
+    const d = event.data;
+
+    if (d.knowledgeReadiness && d.knowledgeReadiness.length > 0) {
+      populateKnowledgeReadinessTable(d.knowledgeReadiness);
+    }
+    if (d.functionalRequirements && d.functionalRequirements.length > 0) {
+      populateFunctionalRequirements(d.functionalRequirements);
+    }
+    if (d.nonFunctionalRequirements && d.nonFunctionalRequirements.length > 0) {
+      populateNonFunctionalTable(d.nonFunctionalRequirements);
+    }
+    if (d.manufacturingReadiness && d.manufacturingReadiness.length > 0) {
+      populateManufacturingTable(d.manufacturingReadiness);
+    }
+
+    recalculate();
+  }
+});
+
 </script>
 
 <button class="download-btn" onclick="downloadPDF()">Download Report</button>
@@ -838,6 +1368,23 @@ function downloadPDF() {
       reach out and start building your MVP.
     </a>
   </p>
+</div>
+
+<!-- AI Assistant Floating Button (hidden until mode selected) -->
+<div id="aiAssistant" style="display:none">
+  <div id="assistantBubble">
+    <span id="typingText"></span>
+  </div>
+  <div id="assistantBot" onclick="openChat()">
+    <lottie-player
+      src="https://assets4.lottiefiles.com/packages/lf20_tno6cg2w.json"
+      background="transparent"
+      speed="1"
+      style="width:105px; height:105px;"
+      loop
+      autoplay>
+    </lottie-player>
+  </div>
 </div>
 
 </body>

@@ -180,6 +180,7 @@ Extract:
 - Cost target
 
 Return ONLY valid JSON.
+IMPORTANT: Only extract information that is EXPLICITLY stated. If the message is vague, gibberish, or does not contain real product information, return an empty object: {}
 
 Example:
 {
@@ -196,20 +197,23 @@ Example:
 function safeMergeSignals(sessionSignals, parsed) {
   if (!parsed || typeof parsed !== "object") return;
 
+  // Helper: treat string "null", actual null, undefined, and "" as empty
+  const isEmpty = (v) => v === null || v === undefined || v === "" || v === "null";
+
   // Only write top-level keys when the incoming value is non-empty,
   // so later LLM calls cannot blank out signals set by question handlers.
   for (const [key, value] of Object.entries(parsed)) {
     if (key === "functionalExamples" || key === "functionalFeatures") continue;
-    if (value !== null && value !== undefined && value !== "") {
+    if (!isEmpty(value)) {
       sessionSignals[key] = value;
     }
   }
 
   if (parsed.functionalExamples && typeof parsed.functionalExamples === "object") {
     ensureFunctionalExamples(sessionSignals);
-    // Only fill empty slots — never overwrite values already set by Q-handlers
+    // Only fill empty slots — never overwrite values already set
     for (const [key, value] of Object.entries(parsed.functionalExamples)) {
-      if (!sessionSignals.functionalExamples[key] && value) {
+      if (!sessionSignals.functionalExamples[key] && !isEmpty(value)) {
         sessionSignals.functionalExamples[key] = value;
       }
     }
@@ -217,10 +221,12 @@ function safeMergeSignals(sessionSignals, parsed) {
 
   if (parsed.functionalFeatures && typeof parsed.functionalFeatures === "object") {
     ensureFunctionalSignals(sessionSignals);
-    sessionSignals.functionalFeatures = {
-      ...sessionSignals.functionalFeatures,
-      ...parsed.functionalFeatures
-    };
+    // Only fill empty slots — never overwrite importance set by earlier questions
+    for (const [key, value] of Object.entries(parsed.functionalFeatures)) {
+      if (!sessionSignals.functionalFeatures[key] && !isEmpty(value)) {
+        sessionSignals.functionalFeatures[key] = value;
+      }
+    }
   }
 }
 
@@ -334,6 +340,8 @@ Return JSON only.
 }
 
 Rules:
+- Only extract information that is EXPLICITLY stated in the message
+- If the message is vague, gibberish, or does not contain real product details, return all null values
 - Extract brief descriptive examples for each feature when mentioned
 - Classify importance: "required" = must have, "important" = should have, "optional" = nice to have
 - Return null for features not mentioned
@@ -432,9 +440,10 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
   
   // ===== ELECTRONICS =====
   // Only run if Q6 hasn't explicitly marked the product as non-electronic
+  // Use hasTerm() for word-boundary matching to avoid false positives like "laptop screen" or "backpack" matching "app"
   if (sessionSignals.hasElectronics !== false) {
-    const electronicsKeywords = ["sensor", "battery", "smart", "electronic", "app", "bluetooth", "wifi", "screen", "display", "chip"];
-    if (electronicsKeywords.some(kw => text.includes(kw))) {
+    const electronicsKeywords = ["sensor", "battery", "electronic", "bluetooth", "wifi", "display panel", "touchscreen", "microcontroller", "chip", "circuit"];
+    if (electronicsKeywords.some(kw => hasTerm(text, kw))) {
       sessionSignals.electronicsKnowledge = "enough";
       sessionSignals.connectivity = true;
       console.log(`🎯 Semantic extraction: electronicsKnowledge="enough", connectivity=true`);
@@ -474,12 +483,12 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
   }
   
   // ===== SAFETY TARGETS =====
-  const safetyKeywords = ["skin", "safe", "non-toxic", "non toxic", "poison", "allergic", "medical", "contact"];
+  const safetyKeywords = ["skin", "safe", "non-toxic", "non toxic", "poison", "allergic", "medical", "skin contact", "body contact"];
   if (safetyKeywords.some(kw => text.includes(kw))) {
     sessionSignals.safetyTarget = true;
-    if (text.includes("skin")) {
+    if (text.includes("skin") || text.includes("body contact")) {
       sessionSignals.safetyTarget = "skin-safe / non-toxic";
-    } else if (text.includes("medical") || text.includes("contact")) {
+    } else if (text.includes("medical")) {
       sessionSignals.safetyTarget = "medical-grade / biocompatible";
     }
     if (sessionSignals.safetyTarget && sessionSignals.safetyTarget !== true) {
@@ -504,16 +513,20 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
   // ===== WEIGHT TARGET =====
   // The dedicated weight question (whichever covers "weightTarget") is always authoritative — see its branch below.
   // Here we only do a preliminary capture from earlier answers so something is better than nothing.
+  // Exclude "load testing up to X kg" and similar testing/capacity contexts.
   const weightMatch = text.match(/(?:under|less|below|max|up to)\s*([\d.]+)\s*(kg|grams?|g\b|lbs?|oz)/i);
-  if (weightMatch && !sessionSignals.weightTarget && questionId !== WEIGHT_QUESTION_ID) {
+  const isTestingContext = /(?:load|test|capacity|support|hold)[\w\s]*?(?:up\s+to|of)\s/i.test(text);
+  if (weightMatch && !sessionSignals.weightTarget && questionId !== WEIGHT_QUESTION_ID && !isTestingContext) {
     sessionSignals.weightTarget = `${weightMatch[1]} ${weightMatch[2]}`;
     sessionSignals.weightDefined = true;
     console.log(`🎯 Semantic extraction: weightTarget="${sessionSignals.weightTarget}", weightDefined=${sessionSignals.weightDefined}`);
   }
   
   // ===== AESTHETIC TARGET =====
-  const aestheticKeywords = ["design", "look", "appearance", "aesthetic", "style", "color", "rugged", "slim", "premium", "modern"];
-  if (aestheticKeywords.some(kw => text.includes(kw))) {
+  // Avoid "design" as trigger — too generic (matches "designed for", "design process").
+  // The specific aesthetic words below are sufficient triggers.
+  const aestheticKeywords = ["look", "appearance", "aesthetic", "style", "color", "rugged", "slim", "premium", "modern", "minimalist", "industrial"];
+  if (aestheticKeywords.some(kw => hasTerm(text, kw))) {
     const aesthetics = ["rugged", "slim", "premium", "modern", "industrial", "minimalist"];
     const detected = aesthetics.filter(a => text.includes(a));
     if (detected.length > 0) {
@@ -559,12 +572,12 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
     { key: "coreFunctionality", keywords: ["primary", "core", "main function", "solve", "prevent", "protect"] },
     { key: "energyPower", keywords: ["battery", "power", "charging", "solar", "voltage", "wireless charging"] },
     { key: "controlLogic", keywords: ["control", "logic", "automatic", "automation", "sensor", "algorithm", "switch"] },
-    { key: "userInteraction", keywords: ["button", "display", "screen", "indicator", "touch", "feedback", "notification"] },
+    { key: "userInteraction", keywords: ["button", "display panel", "touchscreen", "indicator", "touch input", "haptic feedback", "notification"] },
     { key: "environmentalProtection", keywords: ["waterproof", "dustproof", "outdoor", "weather", "temperature", "humidity"] },
     { key: "mechanicalStructure", keywords: ["mechanical", "structure", "enclosure", "frame", "mount", "impact", "drop"] },
     { key: "modularity", keywords: ["replaceable", "interchangeable", "modular", "swappable", "removable", "filter", "cartridge"] },
     { key: "maintenance", keywords: ["maintenance", "repair", "clean", "replace", "service", "tool-less", "easy to clean", "easy to service", "upkeep"] },
-    { key: "interfaces", keywords: ["usb", "bluetooth", "wifi", "nfc", "api", "integration", "port", "app", "mobile", "connectivity"] },
+    { key: "interfaces", keywords: ["usb", "bluetooth", "wifi", "nfc", "api", "integration", "usb-c", "usb port", "data port", "connector port", "mobile app", "connectivity"] },
     { key: "optionalEnhancements", keywords: ["cloud", "ai", "smart feature", "ota update", "voice control", "gps tracking", "nice to have", "optional feature", "bonus feature"] }
   ];
 
@@ -638,9 +651,9 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
       minLength: 5
     },
     // Interfaces
-    { 
-      key: "interfaces", 
-      keywords: ["usb", "port", "connector", "bluetooth", "wifi", "nfc", "api", "integration", "charging"],
+    {
+      key: "interfaces",
+      keywords: ["usb", "connector", "bluetooth", "wifi", "nfc", "api", "integration", "data port", "charging port"],
       minLength: 3
     },
     // Optional enhancements — must be clearly optional, not connectivity/interface keywords
@@ -657,33 +670,12 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
   console.log(`📝 EXTRACTION DEBUG - Answer: "${answer.substring(0, 100)}..."`);
   console.log(`📝 Sentences split (${sentences.length} found):`, sentences);
 
-  // ===== QUESTION OWNERSHIP MAP =====
-  // Each functionalExample key is only written when the current question owns it.
-  // This prevents cross-question contamination (e.g. "power" in failure modes → energyPower).
-  // "interfaces" has no dedicated question (q7_connectivity was removed) so it is unowned
-  // and may be set from any answer that mentions connectivity keywords.
-  const FUNCTIONAL_EXAMPLE_OWNERS = {
-    q4_core_functionality: ["coreFunctionality"],
-    q6_electronics_power:  ["energyPower"],
-    q8_user_interaction:   ["userInteraction", "controlLogic"],
-    q9_size_weight:        [],
-    q10_durability:        ["environmentalProtection"],
-    q14_housing_structure: ["mechanicalStructure"],
-    q25_replaceable_parts: ["modularity"],
-    q27_maintenance:       ["maintenance"],
-    q28_optional_features: ["optionalEnhancements"],
-  };
-
-  const UNOWNED_EXAMPLE_KEYS = new Set(["interfaces"]);
-  const ownedExampleKeys = FUNCTIONAL_EXAMPLE_OWNERS[questionId] || [];
-
   // ===== MULTI-FEATURE SENTENCE DETECTION =====
   for (const sentence of sentences) {
     const s = sentence.toLowerCase();
 
     // Energy / Power
     if (
-      ownedExampleKeys.includes("energyPower") &&
       (s.includes("battery") || s.includes("charging") || s.includes("solar") || s.includes("powered by")) &&
       !sessionSignals.functionalExamples.energyPower
     ) {
@@ -693,7 +685,6 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
 
     // Control Logic
     if (
-      ownedExampleKeys.includes("controlLogic") &&
       (s.includes("sensor") || s.includes("automatic") || s.includes("algorithm")) &&
       !sessionSignals.functionalExamples.controlLogic
     ) {
@@ -703,7 +694,6 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
 
     // User Interaction
     if (
-      ownedExampleKeys.includes("userInteraction") &&
       (s.includes("led") || s.includes("display") || s.includes("button")) &&
       !sessionSignals.functionalExamples.userInteraction
     ) {
@@ -711,9 +701,9 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
       console.log(`✅ QUICK MATCH: userInteraction → "${sentence}"`);
     }
 
-    // Interfaces — unowned, may be set from any answer
+    // Interfaces
     if (
-      (s.includes("usb") || s.includes("bluetooth") || s.includes("wifi") || s.includes("port")) &&
+      (s.includes("usb") || s.includes("bluetooth") || s.includes("wifi") || /\bport\b/.test(s)) &&
       !sessionSignals.functionalExamples.interfaces
     ) {
       sessionSignals.functionalExamples.interfaces = sentence;
@@ -722,16 +712,10 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
   }
 
   // ===== EXAMPLE PATTERN SCORING =====
-  // Only writes to keys owned by the current question (or unowned keys like interfaces).
+  // Only writes to empty slots — never overwrites existing examples.
   for (const pattern of examplePatterns) {
-    if (!UNOWNED_EXAMPLE_KEYS.has(pattern.key) && !ownedExampleKeys.includes(pattern.key)) {
-      console.log(`📝 Skipping ${pattern.key} — not owned by ${questionId}`);
-      continue;
-    }
-
     if (sessionSignals.functionalExamples[pattern.key]) {
-      console.log(`📝 Skipping ${pattern.key} - already set`);
-      continue;
+      continue; // already set — don't overwrite
     }
 
     let bestSentence = null;
@@ -773,6 +757,7 @@ async function extractSignals(sessionSignals, questionId, answer) {
     console.log(buildSignalExtractionPrompt(answer));
   }
 
+  // ===== LLM-BASED EXTRACTION (let the AI do its job) =====
   const extracted = await extractStructuredSignals(answer);
   if (extracted) {
     safeMergeSignals(sessionSignals, extracted);
@@ -782,9 +767,9 @@ async function extractSignals(sessionSignals, questionId, answer) {
   if (parsed) {
     safeMergeSignals(sessionSignals, parsed);
   }
-  
-  // ===== STEP 1: SEMANTIC EXTRACTION (runs for ALL answers) =====
-    await extractSemanticSignals(sessionSignals, answer, questionId);
+
+  // ===== SEMANTIC EXTRACTION (keyword + LLM fallback for ALL answers) =====
+  await extractSemanticSignals(sessionSignals, answer, questionId);
 
   // ===== 29-QUESTION PRC FLOW (q1_product_and_users – q29_development_stage) =====
 
@@ -865,11 +850,15 @@ async function extractSignals(sessionSignals, questionId, answer) {
         sessionSignals.functionalExamples.energyPower = answer.slice(0, 120);
       }
     } else {
-      // Explicitly clear any energyPower values set by earlier semantic extraction
+      // Mark as explicitly "no electronics" — use marker values that won't be overwritten
+      // by later LLM extractions (null/empty would be treated as "empty slot")
       ensureFunctionalSignals(sessionSignals);
-      sessionSignals.functionalFeatures.energyPower = null;
+      sessionSignals.functionalFeatures.energyPower = "__none__";
+      sessionSignals.functionalFeatures.controlLogic = "__none__";
       ensureFunctionalExamples(sessionSignals);
-      sessionSignals.functionalExamples.energyPower = null;
+      sessionSignals.functionalExamples.energyPower = "__none__";
+      sessionSignals.functionalExamples.controlLogic = "__none__";
+      sessionSignals.functionalExamples.interfaces = "__none__";
     }
   }
 
@@ -983,9 +972,8 @@ async function extractSignals(sessionSignals, questionId, answer) {
       : SIGNAL.ENOUGH;
     setFunctionalFeature(sessionSignals, "mechanicalStructure", classifyFeatureImportance(text) || "important");
     ensureFunctionalExamples(sessionSignals);
-    if (!sessionSignals.functionalExamples.mechanicalStructure) {
-      sessionSignals.functionalExamples.mechanicalStructure = answer.slice(0, 120);
-    }
+    // Always overwrite — this is the dedicated question, earlier LLM guesses may be wrong
+    sessionSignals.functionalExamples.mechanicalStructure = answer.slice(0, 120);
     // Infer assembly approach from housing description if not already captured
     if (!sessionSignals.assemblyApproach && /snap|screw|clip|weld|adhere|press.?fit/i.test(text)) {
       sessionSignals.assemblyApproach = answer;
@@ -1094,9 +1082,8 @@ async function extractSignals(sessionSignals, questionId, answer) {
     const modularImportance = /\bno\b|none|not replaceable|not.*replac/i.test(text) ? "optional" : "important";
     setFunctionalFeature(sessionSignals, "modularity", modularImportance);
     ensureFunctionalExamples(sessionSignals);
-    if (!sessionSignals.functionalExamples.modularity) {
-      sessionSignals.functionalExamples.modularity = answer.slice(0, 120);
-    }
+    // Always overwrite — this is the dedicated question, earlier LLM guesses may be wrong
+    sessionSignals.functionalExamples.modularity = answer.slice(0, 120);
   }
 
   if (questionId === "q26_critical_parts") {
@@ -1118,9 +1105,8 @@ async function extractSignals(sessionSignals, questionId, answer) {
   if (questionId === "q28_optional_features") {
     setFunctionalFeature(sessionSignals, "optionalEnhancements", "optional");
     ensureFunctionalExamples(sessionSignals);
-    if (!sessionSignals.functionalExamples.optionalEnhancements) {
-      sessionSignals.functionalExamples.optionalEnhancements = answer.slice(0, 120);
-    }
+    // Always overwrite — this is the dedicated question, earlier LLM guesses may be wrong
+    sessionSignals.functionalExamples.optionalEnhancements = answer.slice(0, 120);
   }
 
   // ─── SECTION 9: Development Plan ──────────────────────────────────────────
