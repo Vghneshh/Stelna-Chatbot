@@ -6,7 +6,8 @@ function toKnowledgeLevel(value) {
   if (text.includes("partial") || text.includes("some")) return "Know Partially";
   if (text.includes("unknown") || text.includes("don't") || text === "false" || text === "no") return "Don't Know";
 
-  return "Know Enough";
+  // Default to "Don't Know" instead of "Know Enough" — don't assume knowledge
+  return "Don't Know";
 }
 
 function toExpertFlag(knowledgeLevel) {

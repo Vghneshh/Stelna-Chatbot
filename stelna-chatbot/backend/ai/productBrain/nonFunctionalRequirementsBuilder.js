@@ -73,45 +73,45 @@ function ensureNonFunctionalRequirements(signals) {
 
   const defaults = {
     weight: {
-      target: "< 1 kg",
+      target: "Not specified",
       defined: false,
       validated: false,
-      risk: "Medium"
+      risk: "Unknown"
     },
 
     durability: {
-      target: "Drop-proof & waterproof",
+      target: "Not specified",
       defined: false,
       validated: false,
-      risk: "Medium"
+      risk: "Unknown"
     },
 
     safety: {
-      target: "Non-toxic materials",
-      defined: true,
+      target: "Not specified",
+      defined: false,
       validated: false,
-      risk: "Low"
+      risk: "Unknown"
     },
 
     compliance: {
-      target: "IEC / CE",
+      target: "Not specified",
       defined: false,
       validated: false,
-      risk: "Medium"
+      risk: "Unknown"
     },
 
     aesthetics: {
       target: "Not specified",
       defined: false,
       validated: false,
-      risk: "Low"
+      risk: "Unknown"
     },
 
     usageEnvironment: {
-      target: "Indoor / Outdoor",
+      target: "Not specified",
       defined: false,
       validated: false,
-      risk: "Low"
+      risk: "Unknown"
     }
   };
 

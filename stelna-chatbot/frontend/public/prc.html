@@ -550,6 +550,10 @@
         <input type="email" id="userEmail" placeholder="e.g. john@example.com" autocomplete="email">
         <div class="error-text" id="userEmailError">Please enter a valid email address.</div>
       </div>
+      <!-- Honeypot: invisible to humans, bots will fill it -->
+      <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true">
+        <input type="text" id="userWebsite" name="website" tabindex="-1" autocomplete="off">
+      </div>
       <button type="submit" class="start-assessment-btn">Start Assessment</button>
     </form>
   </div>
@@ -641,8 +645,85 @@ const isInIframe = window.self !== window.top;
   var form = document.getElementById("userDetailsForm");
   if (!form) return;
 
+  // ─── Validation helpers ───
+
+  var FAKE_LOCAL_PARTS = [
+    "test", "abc", "xyz", "asdf", "qwerty", "aaa", "bbb", "ccc",
+    "123", "1234", "12345", "admin", "user", "info", "noreply",
+    "fake", "sample", "example", "temp", "tmp", "none", "null",
+    "undefined", "foo", "bar", "baz", "testing", "test1", "test123",
+    "aaaa", "abcdef", "qwer", "zxcv", "abcd", "xxxx"
+  ];
+
+  var DISPOSABLE_DOMAINS = [
+    "mailinator.com", "tempmail.com", "guerrillamail.com", "throwaway.email",
+    "yopmail.com", "sharklasers.com", "guerrillamailblock.com", "grr.la",
+    "dispostable.com", "mailnesia.com", "trashmail.com", "tempail.com",
+    "fakeinbox.com", "mailcatch.com", "10minutemail.com", "temp-mail.org",
+    "getnada.com", "mohmal.com", "maildrop.cc", "discard.email",
+    "mailsac.com", "harakirimail.com", "burnermail.io", "tempr.email",
+    "tmail.com", "tmpmail.net", "throwaway.com"
+  ];
+
+  function validateEmail(email) {
+    var basicPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!basicPattern.test(email)) {
+      return { valid: false, message: "Please enter a valid email address." };
+    }
+    var parts = email.split("@");
+    var localPart = parts[0].toLowerCase();
+    var domain = parts[1].toLowerCase();
+
+    if (localPart.length < 3) {
+      return { valid: false, message: "Email username is too short." };
+    }
+    if (FAKE_LOCAL_PARTS.indexOf(localPart) !== -1) {
+      return { valid: false, message: "Please enter your real email address." };
+    }
+    if (/^(.)\1+$/.test(localPart)) {
+      return { valid: false, message: "Please enter a real email address." };
+    }
+    if (DISPOSABLE_DOMAINS.indexOf(domain) !== -1) {
+      return { valid: false, message: "Disposable email addresses are not allowed." };
+    }
+    var tld = domain.substring(domain.lastIndexOf(".") + 1);
+    if (tld.length < 2 || /^\d+$/.test(tld)) {
+      return { valid: false, message: "Please use a valid email domain." };
+    }
+    return { valid: true, message: "" };
+  }
+
+  function validateFullName(name) {
+    if (!name) {
+      return { valid: false, message: "Name is required." };
+    }
+    if (name.length < 2) {
+      return { valid: false, message: "Name should be at least 2 characters." };
+    }
+    if (!/^[a-zA-Z\u00C0-\u024F\u1E00-\u1EFF' -]+$/.test(name)) {
+      return { valid: false, message: "Name should only contain letters, spaces, and hyphens." };
+    }
+    var words = name.split(/\s+/).filter(function(w) { return w.length > 0; });
+    for (var j = 0; j < words.length; j++) {
+      if (/^(.)\1{2,}$/i.test(words[j])) {
+        return { valid: false, message: "Please enter your real name." };
+      }
+    }
+    return { valid: true, message: "" };
+  }
+
+  // ─── Submit handler ───
+
   form.addEventListener("submit", function(e) {
     e.preventDefault();
+
+    // Bot protection: honeypot check
+    var honeypot = document.getElementById("userWebsite");
+    if (honeypot && honeypot.value) {
+      document.getElementById("userDetailsPopup").style.display = "none";
+      document.getElementById("modePopup").style.display = "flex";
+      return;
+    }
 
     var nameInput  = document.getElementById("userName");
     var emailInput = document.getElementById("userEmail");
@@ -658,17 +739,20 @@ const isInIframe = window.self !== window.top;
     nameError.style.display  = "none";
     emailError.style.display = "none";
 
-    // Full Name
-    if (nameInput.value.trim() === "") {
+    // Full Name validation
+    var nameResult = validateFullName(nameInput.value.trim());
+    if (!nameResult.valid) {
       nameInput.classList.add("input-error");
+      nameError.textContent = nameResult.message;
       nameError.style.display = "block";
       valid = false;
     }
 
-    // Email
-    var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(emailInput.value.trim())) {
+    // Email validation
+    var emailResult = validateEmail(emailInput.value.trim());
+    if (!emailResult.valid) {
       emailInput.classList.add("input-error");
+      emailError.textContent = emailResult.message;
       emailError.style.display = "block";
       valid = false;
     }
@@ -683,19 +767,38 @@ const isInIframe = window.self !== window.top;
 
     try {
       localStorage.setItem("prcUserDetails", JSON.stringify(userDetails));
+      localStorage.setItem("username", userDetails.fullName);
     } catch (err) {
       console.log("Could not save user details to localStorage");
+    }
+
+    // Notify parent (App.js) of the username
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: "username_set", username: userDetails.fullName }, "*");
     }
 
     // Save to Firebase via backend
     fetch("http://localhost:5000/user-details", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(userDetails)
+      body: JSON.stringify({
+        fullName: userDetails.fullName,
+        email: userDetails.email
+      })
     })
-    .then(function(res) { return res.json(); })
+    .then(function(res) {
+      if (res.status === 429) {
+        alert("Too many submissions. Please try again later.");
+        throw new Error("rate_limited");
+      }
+      return res.json();
+    })
     .then(function(data) { console.log("User details saved:", data); })
-    .catch(function(err) { console.log("Could not save user details to server:", err); });
+    .catch(function(err) {
+      if (err.message !== "rate_limited") {
+        console.log("Could not save user details to server:", err);
+      }
+    });
 
     // Close user details popup, show mode selection popup
     document.getElementById("userDetailsPopup").style.display = "none";

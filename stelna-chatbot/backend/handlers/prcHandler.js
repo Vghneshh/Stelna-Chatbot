@@ -59,6 +59,18 @@ async function handlePRC(session, message) {
   };
   const stageLabel = formatStageLabel(stageMeta.stage).toUpperCase();
 
+  // If it's a retry (gibberish detected), just show the clarification message with the same question
+  if (prcResponse.isRetry) {
+    return {
+      type: "prc_question",
+      message: `${prcResponse.botMessage}\n\n${prcResponse.question.question}`,
+      knowledgeReadiness: [],
+      functionalRequirements: [],
+      nonFunctionalRequirements: [],
+      manufacturingReadiness: []
+    };
+  }
+
   return {
     type: "prc_question",
     message: `${prcResponse.botMessage}\n\nStage: ${stageLabel}\nQuestion ${prcResponse.questionNum} of ${totalQuestions}\n\n${prcResponse.question.question}`,

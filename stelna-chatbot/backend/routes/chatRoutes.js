@@ -1,10 +1,20 @@
 const express = require("express");
+const dns = require("dns");
 const { chat } = require("../controllers/chatController");
 const firebaseDb = require("../config/firebase");
 
 const router = express.Router();
 
 router.post("/chat", chat);
+
+// Check if email domain has MX records (mail servers exist)
+function checkMxRecord(domain) {
+  return new Promise((resolve) => {
+    dns.resolveMx(domain, (err, records) => {
+      resolve(!err && records && records.length > 0);
+    });
+  });
+}
 
 router.post("/user-details", async (req, res) => {
   try {
@@ -14,12 +24,21 @@ router.post("/user-details", async (req, res) => {
       return res.status(400).json({ error: "All fields are required." });
     }
 
+    // MX record check — verify email domain has real mail servers
+    const domain = email.trim().toLowerCase().split("@")[1];
+    if (domain) {
+      const hasMx = await checkMxRecord(domain);
+      if (!hasMx) {
+        return res.status(400).json({ error: "Email domain does not exist." });
+      }
+    }
+
     // Save to Firebase Realtime Database
     const usersRef = firebaseDb.ref("users");
     const newUserRef = usersRef.push();
     await newUserRef.set({
-      fullName,
-      email,
+      fullName: fullName.trim(),
+      email: email.trim().toLowerCase(),
       createdAt: new Date().toISOString()
     });
 

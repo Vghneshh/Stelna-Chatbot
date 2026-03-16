@@ -3,7 +3,6 @@ import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./App.css";
-import logo from "./assets/logo.png";
 // ...existing code...
 
 function App() {
@@ -25,9 +24,13 @@ function App() {
   const [chat, setChat] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  // ...existing code...
+  const [username, setUsername] = useState(localStorage.getItem("username") || "");
+  const [typingText, setTypingText] = useState("");
+  const [typingDone, setTypingDone] = useState(false);
   const bottomRef = useRef(null);
+  const modalTimeoutRef = useRef(null);
   const iframeRef = useRef(null);
+  const typingRef = useRef(null);
 
   // Send PRC data to iframe via postMessage
   const fillPrcLive = (data) => {
@@ -42,6 +45,19 @@ function App() {
     }, window.location.origin);
   };
 
+  // Show completion modal once — guards against duplicate triggers
+  const showCompletionModal = (data) => {
+    if (showModal) return; // already showing
+    if (modalTimeoutRef.current) clearTimeout(modalTimeoutRef.current);
+    fillPrcLive(data);
+    setChatOpen(false);
+    setShowModal(true);
+    modalTimeoutRef.current = setTimeout(() => {
+      setShowModal(false);
+      modalTimeoutRef.current = null;
+    }, 3000);
+  };
+
   const addBotMessage = (text, options = null) => {
     setChat(prev => [...prev, {
       type: "bot",
@@ -52,6 +68,7 @@ function App() {
   };
 
   const handleMenuOption = async (option) => {
+    if (loading) return;
     // Hide quick action buttons after first click
     setShowQuickActions(false);
 
@@ -89,10 +106,7 @@ function App() {
         addBotMessage(res.data.message, res.data.options);
       }
       else if (res.data.type === "prc_redirect" || (res.data.reply === "__PRC_REDIRECT__" && res.data.prcUrl)) {
-        fillPrcLive(res.data);
-        setChatOpen(false);
-        setShowModal(true);
-        setTimeout(() => setShowModal(false), 3000);
+        showCompletionModal(res.data);
       }
       else {
         addBotMessage(res.data.reply || res.data.message);
@@ -106,6 +120,7 @@ function App() {
 
   const sendMessage = async () => {
     if (!message.trim()) return;
+    if (loading) return;
 
     const userMessage = message;
 
@@ -136,10 +151,7 @@ function App() {
         addBotMessage(res.data.message, res.data.options);
       }
       else if (res.data.type === "prc_redirect" || (res.data.reply === "__PRC_REDIRECT__" && res.data.prcUrl)) {
-        fillPrcLive(res.data);
-        setChatOpen(false);
-        setShowModal(true);
-        setTimeout(() => setShowModal(false), 3000);
+        showCompletionModal(res.data);
       }
       else {
         addBotMessage(res.data.reply || res.data.message);
@@ -154,10 +166,46 @@ function App() {
 
   // ...existing code...
 
+  const getGreetingFirstLine = () => {
+    const name = username || localStorage.getItem("username") || "";
+    return name
+      ? `Hi, ${name}`
+      : `Hi`;
+  };
+
+  const greetingSubtitle = "I'm BuildWise — I can help you evaluate your product readiness or guide you through manufacturing decisions.";
+
+  const getGreeting = () => {
+    return getGreetingFirstLine() + "\n\n" + greetingSubtitle;
+  };
+
+  const startTyping = (firstLine) => {
+    setTypingText("");
+    setTypingDone(false);
+    let i = 0;
+    if (typingRef.current) clearInterval(typingRef.current);
+    typingRef.current = setInterval(() => {
+      i++;
+      setTypingText(firstLine.slice(0, i));
+      if (i >= firstLine.length) {
+        clearInterval(typingRef.current);
+        typingRef.current = null;
+        setTimeout(() => setTypingDone(true), 500);
+      }
+    }, 55);
+  };
+
   // Auto scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat, loading]);
+  }, [chat, loading, typingText]);
+
+  // Start typing when welcome message is added
+  useEffect(() => {
+    if (chat.length === 1 && chat[0].text === "__typing__" && !typingRef.current) {
+      startTyping(getGreetingFirstLine());
+    }
+  }, [chat]);
 
   // Listen for messages from iframe (mode selection, open chatbot)
   useEffect(() => {
@@ -165,12 +213,12 @@ function App() {
       if (event.data && event.data.type === "open_chatbot") {
         setModeSelected(true);
         setChatOpen(true);
-        // Add welcome message with buttons when chat opens
+        // Start typing animation for welcome message
         setChat(prev => {
           if (prev.length === 0) {
             return [{
               type: "bot",
-              text: "Hi 👋 Welcome to BuildWise.AI\n\nI'm here to assist you in planning your product manufacturing.\n\nHow can I help you today?",
+              text: "__typing__",
               time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               showButtons: true
             }];
@@ -180,6 +228,9 @@ function App() {
       }
       if (event.data && event.data.type === "mode_selected") {
         setModeSelected(true);
+      }
+      if (event.data && event.data.type === "username_set") {
+        setUsername(event.data.username);
       }
     };
     window.addEventListener("message", handleMessage);
@@ -205,34 +256,48 @@ function App() {
         <div className="chat-panel">
           <div className="chat-header">
             <div className="header-left">
-              <img src={logo} alt="logo" className="logo" />
-              <span className="title">BuildWise.AI</span>
+              <span className="title"><span className="title-buildwise">BuildWise</span></span>
             </div>
             <button className="chat-close-btn" onClick={() => setChatOpen(false)}>✕</button>
           </div>
 
           <div className="chat-body">
-            {chat.map((c, i) => (
-              <div key={i} className={`msg ${c.type}`}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {c.text}
-                </ReactMarkdown>
+            {(() => {
+              const lastBotIdx = chat.reduce((last, m, idx) => m.type === "bot" ? idx : last, -1);
+              return chat.map((c, i) => (
+              <div key={i} className={`msg ${c.type}${c.text === "__typing__" ? " welcome-msg" : ""}`}>
+                {/* Welcome message with typing animation */}
+                {c.text === "__typing__" ? (
+                  <div className="welcome-greeting">
+                    <h1 className="greeting-gradient">{typingText}</h1>
+                    {!typingDone && <span className="typing-cursor">|</span>}
+                    {typingDone && (
+                      <div className="greeting-reveal">
+                        <p className="greeting-subtitle">{greetingSubtitle}</p>
+                      </div>
+                    )}
+                    {c.showButtons && showQuickActions && typingDone && (
+                      <div className="buttons-reveal">
+                        <div className="menu-options welcome-options">
+                          <button className="menu-btn" onClick={() => handleMenuOption("Check Product Readiness")}>
+                            Check Product Readiness
+                          </button>
+                          <button className="menu-btn" onClick={() => handleMenuOption("Get Manufacturing Guidance")}>
+                            Get Manufacturing Guidance
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {c.text}
+                  </ReactMarkdown>
+                )}
                 <div className="time">{c.time}</div>
 
-                {/* Show quick action buttons on welcome message */}
-                {c.showButtons && showQuickActions && (
-                  <div className="menu-options welcome-options">
-                    <button className="menu-btn" onClick={() => handleMenuOption("Check Product Readiness")}>
-                      Check Product Readiness
-                    </button>
-                    <button className="menu-btn" onClick={() => handleMenuOption("Get Manufacturing Guidance")}>
-                      Get Manufacturing Guidance
-                    </button>
-                  </div>
-                )}
-
-                {/* Render dynamic menu options from backend responses */}
-                {c.menuOptions && (
+                {/* Render dynamic menu options only on the latest bot message */}
+                {c.menuOptions && i === lastBotIdx && (
                   <div className="menu-options">
                     {c.menuOptions.map((opt, idx) => (
                       <button
@@ -246,7 +311,8 @@ function App() {
                   </div>
                 )}
               </div>
-            ))}
+            ));
+            })()}
 
             {loading && (
               <div className="msg bot typing">

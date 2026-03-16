@@ -56,63 +56,63 @@ function ensureManufacturingReadiness(signals) {
       status: false,
       vendor: false,
       cost: false,
-      confidence: 2
+      confidence: 0
     },
 
     materialIdentified: {
       status: false,
       vendor: false,
       cost: false,
-      confidence: 2
+      confidence: 0
     },
 
     prototypeMethod: {
-      status: true,
+      status: false,
       vendor: false,
       cost: false,
-      confidence: 3
+      confidence: 0
     },
 
     tolerances: {
       status: false,
       vendor: false,
       cost: false,
-      confidence: 2
+      confidence: 0
     },
 
     assemblyApproach: {
       status: false,
       vendor: false,
       cost: false,
-      confidence: 2
+      confidence: 0
     },
 
     criticalParts: {
       status: false,
       vendor: false,
       cost: false,
-      confidence: 2
+      confidence: 0
     },
 
     otsVsCustom: {
       status: false,
       vendor: false,
       cost: false,
-      confidence: 2
+      confidence: 0
     },
 
     roughCost: {
       status: false,
       vendor: false,
       cost: false,
-      confidence: 2
+      confidence: 0
     },
 
     feasibility: {
       status: false,
       vendor: false,
       cost: false,
-      confidence: 2
+      confidence: 0
     }
   };
 

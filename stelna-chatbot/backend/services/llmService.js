@@ -1,5 +1,6 @@
 const axios = require("axios");
 const Groq = require("groq-sdk");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Provider 1: Groq (fast, generous free tier)
 async function generateWithGroq(messages) {
@@ -54,6 +55,29 @@ async function generateWithOpenAI(messages) {
   return response.data.choices[0].message.content;
 }
 
+// Provider 4: Gemini (premium, used for complex tasks)
+async function generateWithGemini(messages) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  // Convert OpenAI-style messages to Gemini format
+  const systemMsg = messages.find(m => m.role === "system");
+  const chatMessages = messages.filter(m => m.role !== "system");
+
+  const contents = chatMessages.map(m => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }]
+  }));
+
+  const result = await model.generateContent({
+    contents,
+    systemInstruction: systemMsg ? { parts: [{ text: systemMsg.content }] } : undefined,
+    generationConfig: { temperature: 0.4 }
+  });
+
+  return result.response.text();
+}
+
 // Main function with automatic fallback
 async function generateLLMResponse(messages) {
   const providers = [];
@@ -91,4 +115,23 @@ async function generateLLMResponse(messages) {
   throw lastError;
 }
 
-module.exports = { generateLLMResponse };
+// Premium function: Gemini first, then falls back to free providers
+async function generatePremiumLLMResponse(messages) {
+  // Try Gemini first if API key is available
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      console.log("[LLM-Premium] Trying Gemini...");
+      const result = await generateWithGemini(messages);
+      console.log("[LLM-Premium] Gemini succeeded");
+      return result;
+    } catch (err) {
+      console.warn("[LLM-Premium] Gemini failed:", err.message);
+    }
+  }
+
+  // Fall back to free providers
+  console.log("[LLM-Premium] Falling back to free providers...");
+  return generateLLMResponse(messages);
+}
+
+module.exports = { generateLLMResponse, generatePremiumLLMResponse };

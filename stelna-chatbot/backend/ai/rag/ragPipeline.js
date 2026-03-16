@@ -1,4 +1,4 @@
-const { generateLLMResponse } = require("../../services/llmService");
+const { generatePremiumLLMResponse } = require("../../services/llmService");
 const { generateEmbedding } = require("../../services/embeddingService");
 const { searchSimilarDocs } = require("../../services/vectorSearchService");
 
@@ -111,7 +111,7 @@ INSTRUCTIONS:
 5. Ask ONE follow-up question to refine the recommendation
 `;
 
-  return generateLLMResponse([
+  return generatePremiumLLMResponse([
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: finalPrompt }
   ]);

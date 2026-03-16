@@ -1,6 +1,7 @@
 const prcQuestions = require("./prcQuestions");
 const extractSignals = require("../productBrain/signalExtractor");
 const { extractProductSignals } = require("../productBrain/signalExtractor");
+const { generateLLMResponse } = require("../../services/llmService");
 const {
   buildFunctionalRequirements
 } = require("../productBrain/functionalRequirementsBuilder");
@@ -47,6 +48,65 @@ function getStageMetaByIndex(index) {
   };
 }
 
+// Quick regex fallback to catch obvious gibberish when LLM is unavailable
+function isObviousGibberish(text) {
+  const t = (text || "").trim().toLowerCase();
+  // Single character
+  if (t.length <= 1) return true;
+  // Only 2-3 chars and not a real word (allow: ok, no, ya, yes, idk, na, hi)
+  const shortValid = ["ok", "no", "na", "ya", "ye", "yes", "hi", "idk", "yep", "nah", "nop", "yea"];
+  if (t.length <= 3 && !shortValid.includes(t) && !/^\d+$/.test(t)) return true;
+  // Mix of random letters and numbers with no vowels (e.g., "5g4h", "rgw", "t4g")
+  if (t.length <= 5 && !/[aeiou]/i.test(t) && /\d/.test(t)) return true;
+  // Repeated same character (e.g., "gg", "kk", "rrr")
+  if (/^(.)\1+$/.test(t)) return true;
+  return false;
+}
+
+// Detect conversational/meta messages that aren't actual answers
+function isClarificationRequest(text) {
+  const t = (text || "").trim().toLowerCase();
+  const patterns = [
+    /repeat/i, /explain/i, /what do you mean/i, /don'?t understand/i,
+    /didn'?t get/i, /didn'?t catch/i, /can you clarify/i, /more detail/i,
+    /what'?s that/i, /huh\??/i, /come again/i, /say that again/i,
+    /rephrase/i, /what\??$/i, /i don'?t know what/i, /confused/i,
+    /help me understand/i, /elaborate/i, /wdym/i, /wym/i
+  ];
+  return patterns.some(p => p.test(t));
+}
+
+async function isGibberish(message, question) {
+  try {
+    const prompt = [
+      {
+        role: "system",
+        content: `You are an NLP input validator. Given a question and the user's answer, classify the answer as "valid", "gibberish", or "clarification".
+
+- "valid" — The answer attempts to address the question, even if it is short, has typos, or is vague. Answers like "no idea", "not sure", "don't know", "haven't decided" are valid — the user is saying they lack that information. When in doubt, choose valid.
+- "gibberish" — The answer is random characters (e.g. "asdf", "hgjk"), key mashing, or has absolutely zero relevance to the question (e.g. "lol", "haha" for a product question).
+- "clarification" — The user is asking to repeat or rephrase the question.
+
+Respond with ONLY one word.`
+      },
+      {
+        role: "user",
+        content: `Question: "${question}"\nAnswer: "${message}"`
+      }
+    ];
+    const result = await generateLLMResponse(prompt);
+    const response = result.trim().toLowerCase();
+    if (response.includes("clarification")) return "clarification";
+    if (response.includes("gibberish")) return "gibberish";
+    return "valid";
+  } catch (err) {
+    console.warn("⚠️ Gibberish LLM check failed, using fallback regex:", err.message);
+    if (isClarificationRequest(message)) return "clarification";
+    if (isObviousGibberish(message)) return "gibberish";
+    return "valid";
+  }
+}
+
 async function startPRC(sessionKey) {
   await startPRCSession(sessionKey);
   return {
@@ -69,6 +129,38 @@ async function nextQuestion(sessionKey, message) {
     state.answers = {};
   }
 
+  // Check for gibberish or clarification requests using LLM
+  const questionText = currentQuestion?.question || currentQuestion?.text || "";
+  const inputCheck = await isGibberish(message, questionText);
+
+  if (inputCheck === "gibberish") {
+    return {
+      done: false,
+      botMessage: "I didn't quite catch that. Could you please provide a meaningful answer?",
+      questionNum: currentIndex + 1,
+      totalQuestions: prcQuestions.length,
+      stageMeta: getStageMetaByIndex(currentIndex),
+      question: currentQuestion,
+      isRetry: true
+    };
+  }
+
+  if (inputCheck === "clarification") {
+    const hint = currentQuestion.hint || "";
+    const rephrased = hint
+      ? `Sure! Here's what I mean:\n\n${hint}\n\nTake your best shot — even a rough answer helps!`
+      : `No worries! In simpler words — ${questionText}\n\nIf you're unsure, just say "not sure" and we'll move on.`;
+    return {
+      done: false,
+      botMessage: rephrased,
+      questionNum: currentIndex + 1,
+      totalQuestions: prcQuestions.length,
+      stageMeta: getStageMetaByIndex(currentIndex),
+      question: currentQuestion,
+      isRetry: true
+    };
+  }
+
   if (currentQuestion?.id) {
     state.answers[currentQuestion.id] = message;
 
@@ -82,6 +174,12 @@ async function nextQuestion(sessionKey, message) {
   }
 
   let botMessage = "Got it! 👍";
+
+  // Detect "I don't know" type answers and give a helpful acknowledgement
+  const dontKnowPattern = /\b(no idea|not sure|don'?t know|dont know|haven'?t decided|no clue|unsure|idk|dunno|skip|haven'?t thought|never thought)\b/i;
+  if (dontKnowPattern.test(message)) {
+    botMessage = "No worries — that's totally fine! We'll mark this as undecided for now. You can always revisit it later.";
+  }
   if (currentIndex === 0) {
     const extracted = await extractProductSignals(message).catch(err => {
       console.warn("⚠️ Product signal extraction failed —", err.message);

@@ -3,7 +3,7 @@
  * Listens to chatbot answers and updates session signals
  */
 
-const { generateLLMResponse } = require("../../services/llmService");
+const { generateLLMResponse, generatePremiumLLMResponse } = require("../../services/llmService");
 const prcQuestions = require("../prc/prcQuestions");
 
 // Dynamically resolve which question covers weightTarget so this code doesn't
@@ -91,21 +91,31 @@ Rules:
 
 /**
  * Convert binary yes/no/maybe answers to signal values
+ * Uses keyword matching as a fast first pass
  */
 function interpretBinary(answer) {
-  const text = (answer || "").toLowerCase();
+  const text = (answer || "").toLowerCase().trim();
 
-  if (text.includes("yes") || text.includes("have") || text.includes("do")) {
+  // Clear positive signals
+  if (/\b(yes|yeah|yep|yea|sure|have|do|did|already|definitely|absolutely|of course)\b/.test(text)) {
     return SIGNAL.ENOUGH;
   }
-  if (text.includes("no") || text.includes("not yet") || text.includes("not")) {
+  // Clear negative signals
+  if (/\b(no|nope|nah|not yet|haven't|don't|doesn't|none|nothing|never)\b/.test(text)) {
     return SIGNAL.UNKNOWN;
   }
-  if (text.includes("maybe") || text.includes("think") || text.includes("partially")) {
+  // Partial/uncertain signals
+  if (/\b(maybe|think|partially|somewhat|sort of|kind of|a bit|a little|not sure|unsure|possibly)\b/.test(text)) {
     return SIGNAL.PARTIAL;
   }
 
-  return SIGNAL.PARTIAL;
+  // If the answer has real substance (longer descriptive text), treat as enough
+  if (text.length > 30) {
+    return SIGNAL.ENOUGH;
+  }
+
+  // Default to unknown instead of partial — don't assume knowledge
+  return SIGNAL.UNKNOWN;
 }
 
 /**
@@ -250,7 +260,7 @@ async function extractStructuredSignals(userAnswer) {
   const prompt = buildSignalExtractionPrompt(userAnswer);
 
   try {
-    const response = await generateLLMResponse([
+    const response = await generatePremiumLLMResponse([
       {
         role: "system",
         content: "Extract structured data and return only valid JSON."
@@ -349,7 +359,7 @@ Rules:
 `;
 
   try {
-    const response = await generateLLMResponse([
+    const response = await generatePremiumLLMResponse([
       { role: "system", content: "Return only valid JSON." },
       { role: "user", content: prompt }
     ]);

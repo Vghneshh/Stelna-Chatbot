@@ -9,7 +9,7 @@
  *  - Projection into the existing PRC signals model (signals.js)
  */
 
-const { generateLLMResponse } = require("../../services/llmService");
+const { generatePremiumLLMResponse } = require("../../services/llmService");
 
 // Create an empty understanding state (stored under signals.productUnderstanding)
 function createEmptyUnderstanding() {
@@ -143,7 +143,7 @@ Set confidences between 0 and 1.0. If something is not mentioned, leave strings 
 Return ONLY the JSON object, no extra text.`;
 
   try {
-    const response = await generateLLMResponse([
+    const response = await generatePremiumLLMResponse([
       {
         role: "system",
         content: "You extract structured product signals. Return only valid JSON."
