@@ -66,6 +66,97 @@
       }
     }
 
+    /* ================= WELCOME SECTION ================= */
+
+    #welcomeSection {
+      margin: 40px 20px;
+      text-align: center;
+    }
+
+    .welcome-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #f8f9fa;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .welcome-title {
+      font-size: 32px;
+      color: #333;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+
+    .welcome-subtitle {
+      font-size: 18px;
+      color: #666;
+      margin-bottom: 32px;
+      line-height: 1.4;
+    }
+
+    .welcome-buttons {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .check-readiness-btn,
+    .manufacturing-guidance-btn {
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .check-readiness-btn {
+      background: #007bff;
+      color: white;
+    }
+
+    .check-readiness-btn:hover {
+      background: #0056b3;
+      transform: translateY(-2px);
+    }
+
+    .manufacturing-guidance-btn {
+      background: #e9ecef;
+      color: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .manufacturing-guidance-btn:disabled {
+      opacity: 0.6;
+    }
+
+    @media screen and (max-width: 768px) {
+      .welcome-title {
+        font-size: 28px;
+      }
+
+      .welcome-subtitle {
+        font-size: 16px;
+      }
+
+      .welcome-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .check-readiness-btn,
+      .manufacturing-guidance-btn {
+        width: 100%;
+        max-width: 300px;
+      }
+    }
+
     /* ================= LAYOUT ================= */
 
     .layout {
@@ -621,6 +712,20 @@
   <p>Evaluate execution readiness across knowledge, requirements, and manufacturing.</p>
   <p>Pie &amp; bar charts instantly surface gaps and risks.</p>
   <p>Create a clear, shareable readiness report for teams and stakeholders.</p>
+</div>
+
+<!-- ================= WELCOME SECTION ================= -->
+
+<div id="welcomeSection" style="display:none">
+  <div class="welcome-container">
+    <h1 class="welcome-title" id="welcomeTitle">Hi, Mr Guest</h1>
+    <p class="welcome-subtitle">I'm BuildWise — I can help you evaluate your product readiness</p>
+    <div class="welcome-buttons">
+      <button class="check-readiness-btn" onclick="checkProductReadiness()">
+        Check Product Readiness
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- ================= CONTENT ================= -->
@@ -1376,6 +1481,39 @@ function downloadPDF() {
   window.print();
 }
 
+/* ================= WELCOME SECTION FUNCTIONS ================= */
+
+function showWelcomeSection() {
+  // Get username from localStorage and update welcome message
+  var username = localStorage.getItem("username") || "Guest";
+  var welcomeTitle = document.getElementById("welcomeTitle");
+  if (welcomeTitle) {
+    // Extract first name or use the full name as Mr
+    var firstName = username.split(" ")[0];
+    welcomeTitle.textContent = `Hi, Mr ${firstName}`;
+  }
+
+  // Show welcome section
+  document.getElementById("welcomeSection").style.display = "block";
+}
+
+function checkProductReadiness() {
+  // Hide welcome section and show the main PRC content
+  document.getElementById("welcomeSection").style.display = "none";
+  document.getElementById("prcContent").style.display = "flex";
+
+  // Show AI assistant if available
+  var assistant = document.getElementById("aiAssistant");
+  if (assistant && assistant.style.display === "none") {
+    showAssistant();
+  }
+}
+
+function getManufacturingGuidance() {
+  // This function is currently disabled
+  alert("Manufacturing Guidance feature is coming soon!");
+}
+
 /* ================= MODE SELECT ================= */
 
 function showAssistant() {
@@ -1404,8 +1542,7 @@ function openChat() {
 
 function startManual() {
   document.getElementById("modePopup").style.display = "none";
-  document.getElementById("prcContent").style.display = "flex";
-  showAssistant();
+  showWelcomeSection(); // Show welcome section instead of direct PRC content
   // Tell the parent (App.js) that a mode was selected so the chat icon can appear
   if (window.parent !== window) {
     window.parent.postMessage({ type: "mode_selected" }, "*");
@@ -1414,8 +1551,7 @@ function startManual() {
 
 function startChatbot() {
   document.getElementById("modePopup").style.display = "none";
-  document.getElementById("prcContent").style.display = "flex";
-  showAssistant();
+  showWelcomeSection(); // Show welcome section instead of direct PRC content
   // Tell the parent (App.js) to open the chatbot panel
   if (window.parent !== window) {
     window.parent.postMessage({ type: "open_chatbot" }, "*");
