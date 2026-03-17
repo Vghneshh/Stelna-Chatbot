@@ -778,7 +778,7 @@ const isInIframe = window.self !== window.top;
     }
 
     // Save to Firebase via backend
-    fetch("http://localhost:5000/user-details", {
+    fetch("https://stelnaassist.onrender.com/user-details", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
