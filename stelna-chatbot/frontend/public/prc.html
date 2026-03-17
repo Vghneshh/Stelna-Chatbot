@@ -225,41 +225,18 @@
     /* ================= PRINT (PDF) ================= */
 
     @media print {
-      .download-btn,
-      #aiAssistant,
-      #welcomeSection,
-      #userDetailsPopup,
-      #modePopup,
-      .next-steps {
-        display: none !important;
+      .download-btn {
+        display: none;
       }
 
       .layout {
-        display: flex;
-        flex-direction: column;
+        display: block;
       }
 
-      /* Show charts first on page 1 */
-      .right.charts-page {
-        order: -1;
+      .charts-page {
+        page-break-before: always;
         width: 100%;
-        margin-top: 20px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: center;
-        page-break-after: always;
-      }
-
-      .charts-page canvas {
-        max-width: 45% !important;
-        max-height: 280px !important;
-      }
-
-      /* Tables come after charts */
-      .left {
-        order: 1;
-        width: 100%;
+        margin-top: 40px;
       }
 
       canvas {
