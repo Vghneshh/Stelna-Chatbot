@@ -98,10 +98,17 @@ body {
   color: white;
 }
 
-.title-buildwise {
-  font-family: 'Pacifico', cursive;
-  font-weight: 400;
+.title-brand {
+  font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: 0.3px;
   margin-right: 2px;
+  background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .title-dot {
@@ -284,6 +291,17 @@ body {
 
 .chat-input button:hover {
   background: #155ac9;
+}
+
+.chat-input input:disabled {
+  background: #f0f0f0;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.chat-input button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 /* ================= MENU OPTIONS ================= */

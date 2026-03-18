@@ -179,7 +179,7 @@ function App() {
       : `Hi`;
   };
 
-  const greetingSubtitle = "Welcome to BuildWise.\nI'll help you evaluate your product readiness step by step.\n\nReady to get started?";
+  const greetingSubtitle = "Welcome to Stelna Bot.\nI'll help you evaluate your product readiness step by step.\n\nReady to get started?";
 
   const getGreeting = () => {
     return getGreetingFirstLine() + "\n\n" + greetingSubtitle;
@@ -262,7 +262,7 @@ function App() {
         <div className="chat-panel">
           <div className="chat-header">
             <div className="header-left">
-              <span className="title"><span className="title-buildwise">BuildWise</span></span>
+              <span className="title"><span className="title-brand">Stelna Bot</span></span>
             </div>
             <button className="chat-close-btn" onClick={() => setChatOpen(false)}>✕</button>
           </div>
