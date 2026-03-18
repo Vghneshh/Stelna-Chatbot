@@ -173,7 +173,7 @@ function App() {
       : `Hi`;
   };
 
-  const greetingSubtitle = "I'm BuildWise — I can help you evaluate your product readiness or guide you through manufacturing decisions.";
+  const greetingSubtitle = "Welcome to BuildWise.\nI'll help you evaluate your product readiness step by step.\n\nReady to get started?";
 
   const getGreeting = () => {
     return getGreetingFirstLine() + "\n\n" + greetingSubtitle;
@@ -280,10 +280,7 @@ function App() {
                       <div className="buttons-reveal">
                         <div className="menu-options welcome-options">
                           <button className="menu-btn" onClick={() => handleMenuOption("Check Product Readiness")}>
-                            Check Product Readiness
-                          </button>
-                          <button className="menu-btn" onClick={() => handleMenuOption("Get Manufacturing Guidance")}>
-                            Get Manufacturing Guidance
+                            Start Assessment
                           </button>
                         </div>
                       </div>

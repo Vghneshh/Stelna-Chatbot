@@ -201,6 +201,10 @@ body {
   text-align: right;
 }
 
+.msg.user .time {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .msg.bot .time {
   text-align: left;
   color: #9ca3af;
@@ -315,6 +319,23 @@ body {
   transform: translateY(0);
 }
 
+.menu-btn.disabled,
+.menu-btn:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  border-color: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.menu-btn.disabled:hover,
+.menu-btn:disabled:hover {
+  background: #e5e7eb;
+  color: #9ca3af;
+  transform: none;
+  box-shadow: none;
+}
+
 /* ================= WELCOME GREETING ================= */
 
 .welcome-greeting {
@@ -354,9 +375,10 @@ body {
 .greeting-subtitle {
   font-size: 14px;
   color: #555;
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 6px 0 0;
   font-weight: 400;
+  white-space: pre-line;
 }
 
 /* ================= TYPING ANIMATION ================= */
@@ -434,6 +456,25 @@ body {
 .welcome-options .menu-btn:active {
   transform: translateY(0);
   box-shadow: 0 2px 8px rgba(46, 91, 255, 0.25);
+}
+
+.welcome-options .menu-btn.disabled,
+.welcome-options .menu-btn:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.welcome-options .menu-btn.disabled:hover,
+.welcome-options .menu-btn:disabled:hover {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #d1d5db;
+  transform: none;
+  box-shadow: none;
 }
 
 /* ================= COMPLETION MODAL ================= */
