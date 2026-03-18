@@ -1909,10 +1909,11 @@ async function downloadPDF() {
   const { jsPDF } = window.jspdf;
 
   // Hide UI elements before capture
-  const hideElements = ['#aiAssistant', '#bottomDownloadBtn', '.download-btn', '#nextStepsSection'];
-  hideElements.forEach(sel => {
-    const el = document.querySelector(sel);
-    if (el) el.style.visibility = 'hidden';
+  const hideSelectors = ['#aiAssistant', '#bottomDownloadBtn', '.download-btn', '#nextStepsSection'];
+  hideSelectors.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.style.visibility = 'hidden';
+    });
   });
 
   // Show print footer
@@ -2016,9 +2017,10 @@ async function downloadPDF() {
   }
 
   // Restore UI elements
-  hideElements.forEach(sel => {
-    const el = document.querySelector(sel);
-    if (el) el.style.visibility = 'visible';
+  hideSelectors.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.style.visibility = 'visible';
+    });
   });
 
   if (printFooter) printFooter.style.display = 'none';

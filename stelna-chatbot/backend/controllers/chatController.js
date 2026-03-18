@@ -6,7 +6,9 @@ const { handleRAG } = require("../handlers/ragHandler");
 const {
   getSessionKey,
   setLastUserQuestion,
-  deletePRCSession
+  deletePRCSession,
+  markPRCCompleted,
+  isPRCCompleted
 } = require("../memory/sessionManager");
 
 async function chat(req, res) {
@@ -31,7 +33,19 @@ async function chat(req, res) {
     // PRC logic
     const prcResult = await handlePRC(session, message);
     if (prcResult) {
+      if (prcResult.type === "prc_redirect") {
+        markPRCCompleted(session);
+      }
       return res.json(prcResult);
+    }
+
+    // Block free-text after PRC is completed — show options instead
+    if (isPRCCompleted(session)) {
+      return res.json({
+        type: "prc_question",
+        message: "You've completed the assessment. Choose an option below to continue.",
+        options: ["Check Product Readiness", "Get Manufacturing Guidance"]
+      });
     }
 
     // Closure logic

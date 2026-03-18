@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const prcSessions = new Map();
 const lastUserQuestions = new Map();
+const prcCompletedSessions = new Set();
 
 function getPRCCollection() {
   return mongoose.connection?.db?.collection("prc_sessions");
@@ -93,11 +94,20 @@ async function savePRCSession(sessionKey, state) {
 
 async function deletePRCSession(sessionKey) {
   prcSessions.delete(sessionKey);
+  prcCompletedSessions.delete(sessionKey);
 
   const collection = getPRCCollection();
   if (collection) {
     await collection.deleteOne({ sessionId: sessionKey });
   }
+}
+
+function markPRCCompleted(sessionKey) {
+  prcCompletedSessions.add(sessionKey);
+}
+
+function isPRCCompleted(sessionKey) {
+  return prcCompletedSessions.has(sessionKey);
 }
 
 function getLastUserQuestion(sessionKey) {
@@ -115,5 +125,7 @@ module.exports = {
   savePRCSession,
   deletePRCSession,
   getLastUserQuestion,
-  setLastUserQuestion
+  setLastUserQuestion,
+  markPRCCompleted,
+  isPRCCompleted
 };

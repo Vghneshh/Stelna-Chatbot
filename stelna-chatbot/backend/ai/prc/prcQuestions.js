@@ -1,5 +1,5 @@
 /**
- * PRC Questions — 28-question set
+ * PRC Questions - 28-question set
  *
  * Question order mirrors the four PRC tables:
  *   1. Knowledge Readiness  (q1, q4, q5, q2, q3, q16, q11, q29)
@@ -23,7 +23,7 @@ module.exports = [
   {
     id: "q1_product_and_users",
     stage: "knowledge",
-    question: "What is your product? Give a brief one-sentence description — and who are your target users?",
+    question: "What is your product? Give a brief one-sentence description - and who are your target users?",
     hint: "Just tell me what you're building and who would use it. For example: 'A portable laptop stand for remote workers' or 'A smart water bottle for gym-goers'.",
     covers: ["productOverview", "product", "userUnderstanding", "users"]
   },
