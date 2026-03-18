@@ -21,6 +21,13 @@ async function chat(req, res) {
 
     const session = getSessionKey(sessionId);
 
+    // STRICT: Block ALL interaction after PRC completion - check this FIRST
+    if (isPRCCompleted(session)) {
+      return res.json({
+        reply: "You've already completed this assessment 😊\nTo try again, please start a new session."
+      });
+    }
+
     // If user selects "Get Manufacturing Guidance", clear any active PRC session
     // and switch to normal RAG chat mode
     if (String(message || "").toLowerCase().includes("get manufacturing guidance")) {
@@ -37,15 +44,6 @@ async function chat(req, res) {
         markPRCCompleted(session);
       }
       return res.json(prcResult);
-    }
-
-    // Block free-text after PRC is completed - show options instead
-    if (isPRCCompleted(session)) {
-      return res.json({
-        type: "prc_question",
-        message: "You've completed the assessment. Choose an option below to continue.",
-        options: ["Check Product Readiness", "Get Manufacturing Guidance"]
-      });
     }
 
     // Closure logic
