@@ -872,7 +872,7 @@ async function extractSignals(sessionSignals, questionId, answer) {
     }
   }
 
-  if (questionId === "q7_connectivity") {
+  if (questionId === "q28_optional_features") {
     if (/app|bluetooth|wifi|nfc|wireless|connected|internet/i.test(text)) {
       sessionSignals.connectivity = true;
       setFunctionalFeature(sessionSignals, "interfaces", classifyFeatureImportance(text) || "important");
