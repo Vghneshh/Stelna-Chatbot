@@ -14,7 +14,7 @@ function buildKnowledgeReadiness(signals) {
   }
 
   // Rows in the same order as the HTML knowledge table.
-  // `id` is the stable key used by the frontend — never rename it.
+  // `id` is the stable key used by the frontend - never rename it.
   // `area` is the display label only and can be changed freely.
   rows.push({
     id: "problemUnderstanding",

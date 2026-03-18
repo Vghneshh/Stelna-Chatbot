@@ -3,7 +3,7 @@ function ensureOptionalFeatures(signals) {
   if (!signals.functionalExamples) {
     signals.functionalExamples = {};
   }
-  // Only ensure keys exist — no fake defaults
+  // Only ensure keys exist - no fake defaults
   if (!signals.functionalExamples.modularity) signals.functionalExamples.modularity = "";
   if (!signals.functionalExamples.maintenance) signals.functionalExamples.maintenance = "";
   if (!signals.functionalExamples.optionalEnhancements) signals.functionalExamples.optionalEnhancements = "";
@@ -13,7 +13,7 @@ function ensureAllFunctionalRows(signals) {
   if (!signals.functionalExamples) {
     signals.functionalExamples = {};
   }
-  // Only ensure the keys exist — do NOT fill in placeholder text.
+  // Only ensure the keys exist - do NOT fill in placeholder text.
   // Empty slots stay empty so the PRC shows blank instead of fabricated defaults.
   const keys = [
     "coreFunctionality", "energyPower", "controlLogic", "userInteraction",

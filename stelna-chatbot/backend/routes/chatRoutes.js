@@ -24,7 +24,7 @@ router.post("/user-details", async (req, res) => {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    // MX record check — verify email domain has real mail servers
+    // MX record check - verify email domain has real mail servers
     const domain = email.trim().toLowerCase().split("@")[1];
     if (domain) {
       const hasMx = await checkMxRecord(domain);

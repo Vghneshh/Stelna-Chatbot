@@ -63,6 +63,17 @@ function isObviousGibberish(text) {
   return false;
 }
 
+// Check if answer is too short/vague for a question requiring details
+function isInsufficientAnswer(text) {
+  const t = (text || "").trim().toLowerCase();
+  // Short yes/no type answers that don't provide detail
+  const vagueAnswers = [
+    "yes", "no", "yeah", "yep", "nope", "nah", "yea", "ya", "ok", "okay",
+    "sure", "maybe", "idk", "dunno", "probably", "possibly", "true", "false"
+  ];
+  return vagueAnswers.includes(t) || t.length <= 4;
+}
+
 // Detect conversational/meta messages that aren't actual answers
 function isClarificationRequest(text) {
   const t = (text || "").trim().toLowerCase();
@@ -83,9 +94,9 @@ async function isGibberish(message, question) {
         role: "system",
         content: `You are an NLP input validator. Given a question and the user's answer, classify the answer as "valid", "gibberish", or "clarification".
 
-- "valid" — The answer attempts to address the question, even if it is short, has typos, or is vague. Answers like "no idea", "not sure", "don't know", "haven't decided" are valid — the user is saying they lack that information. When in doubt, choose valid.
-- "gibberish" — The answer is random characters (e.g. "asdf", "hgjk"), key mashing, or has absolutely zero relevance to the question (e.g. "lol", "haha" for a product question).
-- "clarification" — The user is asking to repeat or rephrase the question.
+- "valid" - The answer attempts to address the question, even if it is short, has typos, or is vague. Answers like "no idea", "not sure", "don't know", "haven't decided" are valid - the user is saying they lack that information. When in doubt, choose valid.
+- "gibberish" - The answer is random characters (e.g. "asdf", "hgjk"), key mashing, or has absolutely zero relevance to the question (e.g. "lol", "haha" for a product question).
+- "clarification" - The user is asking to repeat or rephrase the question.
 
 Respond with ONLY one word.`
       },
@@ -148,11 +159,25 @@ async function nextQuestion(sessionKey, message) {
   if (inputCheck === "clarification") {
     const hint = currentQuestion.hint || "";
     const rephrased = hint
-      ? `Sure! Here's what I mean:\n\n${hint}\n\nTake your best shot — even a rough answer helps!`
-      : `No worries! In simpler words — ${questionText}\n\nIf you're unsure, just say "not sure" and we'll move on.`;
+      ? `Sure! Here's what I mean:\n\n${hint}\n\nTake your best shot - even a rough answer helps!`
+      : `No worries! In simpler words - ${questionText}\n\nIf you're unsure, just say "not sure" and we'll move on.`;
     return {
       done: false,
       botMessage: rephrased,
+      questionNum: currentIndex + 1,
+      totalQuestions: prcQuestions.length,
+      stageMeta: getStageMetaByIndex(currentIndex),
+      question: currentQuestion,
+      isRetry: true
+    };
+  }
+
+  // Check if question requires detail but answer is too short/vague
+  if (currentQuestion.requiresDetail && isInsufficientAnswer(message)) {
+    const hint = currentQuestion.hint || "";
+    return {
+      done: false,
+      botMessage: `Could you provide a bit more detail?\n\n${hint || questionText}`,
       questionNum: currentIndex + 1,
       totalQuestions: prcQuestions.length,
       stageMeta: getStageMetaByIndex(currentIndex),
@@ -169,7 +194,7 @@ async function nextQuestion(sessionKey, message) {
     }
 
     await extractSignals(state.sessionSignals, currentQuestion.id, message).catch(err => {
-      console.warn("⚠️ Signal extraction failed for question", currentQuestion.id, "—", err.message);
+      console.warn("⚠️ Signal extraction failed for question", currentQuestion.id, "-", err.message);
     });
   }
 
@@ -178,11 +203,11 @@ async function nextQuestion(sessionKey, message) {
   // Detect "I don't know" type answers and give a helpful acknowledgement
   const dontKnowPattern = /\b(no idea|not sure|don'?t know|dont know|haven'?t decided|no clue|unsure|idk|dunno|skip|haven'?t thought|never thought)\b/i;
   if (dontKnowPattern.test(message)) {
-    botMessage = "No worries — that's totally fine! We'll mark this as undecided for now. You can always revisit it later.";
+    botMessage = "No worries - that's totally fine! We'll mark this as undecided for now. You can always revisit it later.";
   }
   if (currentIndex === 0) {
     const extracted = await extractProductSignals(message).catch(err => {
-      console.warn("⚠️ Product signal extraction failed —", err.message);
+      console.warn("⚠️ Product signal extraction failed -", err.message);
       return { product: "", user: "", problem: "", domain: "", hasElectronics: false };
     });
     state.productSignals = extracted;
@@ -310,7 +335,7 @@ async function nextQuestion(sessionKey, message) {
 }
 
 // Build partial PRC data from current signals (uses a deep clone to avoid mutation)
-// NOTE: Does NOT call ensure* functions — only includes fields with real signals, no defaults.
+// NOTE: Does NOT call ensure* functions - only includes fields with real signals, no defaults.
 // Only DISPLAYS functional rows whose dedicated question has already been answered.
 function buildPartialPRC(sessionSignals, answers, currentQuestionIndex) {
   const snapshot = JSON.parse(JSON.stringify(sessionSignals || {}));
@@ -330,7 +355,7 @@ function buildPartialPRC(sessionSignals, answers, currentQuestionIndex) {
     5: "q14_housing_structure",     // Mechanical Structure
     6: "q25_replaceable_parts",     // Modularity
     7: "q27_maintenance",           // Maintenance
-    8: null,                        // Interfaces (no dedicated question — show when ANY data exists)
+    8: null,                        // Interfaces (no dedicated question - show when ANY data exists)
     9: "q28_optional_features"      // Optional Enhancements
   };
 
@@ -358,7 +383,7 @@ function buildPartialPRC(sessionSignals, answers, currentQuestionIndex) {
     return row;
   });
 
-  // Only hydrate (move flat signals to nested structure) — do NOT fill defaults
+  // Only hydrate (move flat signals to nested structure) - do NOT fill defaults
   hydrateNonFunctionalFromSignals(snapshot);
   const nonFunctionalRequirements = [];
 
@@ -392,7 +417,7 @@ function buildPartialPRC(sessionSignals, answers, currentQuestionIndex) {
     });
   }
 
-  // Only hydrate — do NOT fill defaults
+  // Only hydrate - do NOT fill defaults
   hydrateManufacturingFromSignals(snapshot);
   const manufacturingReadiness = [];
 

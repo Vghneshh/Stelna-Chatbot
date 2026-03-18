@@ -27,6 +27,7 @@ function App() {
   const [username, setUsername] = useState(localStorage.getItem("username") || "");
   const [typingText, setTypingText] = useState("");
   const [typingDone, setTypingDone] = useState(false);
+  const [assessmentStarted, setAssessmentStarted] = useState(false);
   const bottomRef = useRef(null);
   const modalTimeoutRef = useRef(null);
   const iframeRef = useRef(null);
@@ -45,7 +46,7 @@ function App() {
     }, window.location.origin);
   };
 
-  // Show completion modal once — guards against duplicate triggers
+  // Show completion modal once - guards against duplicate triggers
   const showCompletionModal = (data) => {
     if (showModal) return; // already showing
     if (modalTimeoutRef.current) clearTimeout(modalTimeoutRef.current);
@@ -71,6 +72,11 @@ function App() {
     if (loading) return;
     // Hide quick action buttons after first click
     setShowQuickActions(false);
+
+    // Enable input when assessment starts
+    if (option === "Check Product Readiness") {
+      setAssessmentStarted(true);
+    }
 
     // Add user selection as message
     setChat(prev => [...prev, {
@@ -325,11 +331,12 @@ function App() {
           <div className="chat-input">
             <input
               value={message}
-              placeholder="Describe your product..."
+              placeholder={assessmentStarted ? "Describe your product..." : "Click 'Start Assessment' to begin"}
               onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              onKeyDown={(e) => e.key === "Enter" && assessmentStarted && sendMessage()}
+              disabled={!assessmentStarted}
             />
-            <button onClick={sendMessage}>Send</button>
+            <button onClick={sendMessage} disabled={!assessmentStarted}>Send</button>
           </div>
         </div>
       )}

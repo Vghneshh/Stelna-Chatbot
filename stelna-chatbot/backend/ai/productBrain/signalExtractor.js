@@ -114,14 +114,14 @@ function interpretBinary(answer) {
     return SIGNAL.ENOUGH;
   }
 
-  // Default to unknown instead of partial — don't assume knowledge
+  // Default to unknown instead of partial - don't assume knowledge
   return SIGNAL.UNKNOWN;
 }
 
 /**
  * Safe setter for knowledge-level signals.
  * Accepts "enough" | "partial" | "unknown" directly, or interprets raw answer text.
- * This guarantees all knowledge signals are normalized — even if interpretBinary()
+ * This guarantees all knowledge signals are normalized - even if interpretBinary()
  * is forgotten in a future edit.
  */
 function setSignal(signals, key, value) {
@@ -221,7 +221,7 @@ function safeMergeSignals(sessionSignals, parsed) {
 
   if (parsed.functionalExamples && typeof parsed.functionalExamples === "object") {
     ensureFunctionalExamples(sessionSignals);
-    // Only fill empty slots — never overwrite values already set
+    // Only fill empty slots - never overwrite values already set
     for (const [key, value] of Object.entries(parsed.functionalExamples)) {
       if (!sessionSignals.functionalExamples[key] && !isEmpty(value)) {
         sessionSignals.functionalExamples[key] = value;
@@ -231,7 +231,7 @@ function safeMergeSignals(sessionSignals, parsed) {
 
   if (parsed.functionalFeatures && typeof parsed.functionalFeatures === "object") {
     ensureFunctionalSignals(sessionSignals);
-    // Only fill empty slots — never overwrite importance set by earlier questions
+    // Only fill empty slots - never overwrite importance set by earlier questions
     for (const [key, value] of Object.entries(parsed.functionalFeatures)) {
       if (!sessionSignals.functionalFeatures[key] && !isEmpty(value)) {
         sessionSignals.functionalFeatures[key] = value;
@@ -521,7 +521,7 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
   }
   
   // ===== WEIGHT TARGET =====
-  // The dedicated weight question (whichever covers "weightTarget") is always authoritative — see its branch below.
+  // The dedicated weight question (whichever covers "weightTarget") is always authoritative - see its branch below.
   // Here we only do a preliminary capture from earlier answers so something is better than nothing.
   // Exclude "load testing up to X kg" and similar testing/capacity contexts.
   const weightMatch = text.match(/(?:under|less|below|max|up to)\s*([\d.]+)\s*(kg|grams?|g\b|lbs?|oz)/i);
@@ -533,7 +533,7 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
   }
   
   // ===== AESTHETIC TARGET =====
-  // Avoid "design" as trigger — too generic (matches "designed for", "design process").
+  // Avoid "design" as trigger - too generic (matches "designed for", "design process").
   // The specific aesthetic words below are sufficient triggers.
   const aestheticKeywords = ["look", "appearance", "aesthetic", "style", "color", "rugged", "slim", "premium", "modern", "minimalist", "industrial"];
   if (aestheticKeywords.some(kw => hasTerm(text, kw))) {
@@ -666,7 +666,7 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
       keywords: ["usb", "connector", "bluetooth", "wifi", "nfc", "api", "integration", "data port", "charging port"],
       minLength: 3
     },
-    // Optional enhancements — must be clearly optional, not connectivity/interface keywords
+    // Optional enhancements - must be clearly optional, not connectivity/interface keywords
     {
       key: "optionalEnhancements",
       keywords: ["optional", "bonus", "extra", "nice to have", "could include", "future", "upgrade", "ota", "voice", "gps"],
@@ -722,10 +722,10 @@ async function extractSemanticSignals(sessionSignals, answer, questionId) {
   }
 
   // ===== EXAMPLE PATTERN SCORING =====
-  // Only writes to empty slots — never overwrites existing examples.
+  // Only writes to empty slots - never overwrites existing examples.
   for (const pattern of examplePatterns) {
     if (sessionSignals.functionalExamples[pattern.key]) {
-      continue; // already set — don't overwrite
+      continue; // already set - don't overwrite
     }
 
     let bestSentence = null;
@@ -814,7 +814,7 @@ async function extractSignals(sessionSignals, questionId, answer) {
 
   if (questionId === "q4_core_functionality") {
     sessionSignals.coreFunctionalityKnowledge = answer;
-    // Core functionality is inherently required — override any semantic classification
+    // Core functionality is inherently required - override any semantic classification
     setFunctionalFeature(sessionSignals, "coreFunctionality", "required");
     ensureFunctionalExamples(sessionSignals);
     if (!sessionSignals.functionalExamples.coreFunctionality) {
@@ -860,7 +860,7 @@ async function extractSignals(sessionSignals, questionId, answer) {
         sessionSignals.functionalExamples.energyPower = answer.slice(0, 120);
       }
     } else {
-      // Mark as explicitly "no electronics" — use marker values that won't be overwritten
+      // Mark as explicitly "no electronics" - use marker values that won't be overwritten
       // by later LLM extractions (null/empty would be treated as "empty slot")
       ensureFunctionalSignals(sessionSignals);
       sessionSignals.functionalFeatures.energyPower = "__none__";
@@ -888,7 +888,7 @@ async function extractSignals(sessionSignals, questionId, answer) {
   if (questionId === "q8_user_interaction") {
     setFunctionalFeature(sessionSignals, "userInteraction", classifyFeatureImportance(text) || "required");
     ensureFunctionalExamples(sessionSignals);
-    // Always set from the dedicated interaction question — overrides any LLM guess from earlier answers
+    // Always set from the dedicated interaction question - overrides any LLM guess from earlier answers
     sessionSignals.functionalExamples.userInteraction = answer.slice(0, 120);
     // Control logic inferred if sensors/automation mentioned
     if (/sensor|automat|algorithm|logic|detect/i.test(text)) {
@@ -902,7 +902,7 @@ async function extractSignals(sessionSignals, questionId, answer) {
   // ─── SECTION 4: Physical Design ───────────────────────────────────────────
 
   if (questionId === WEIGHT_QUESTION_ID) {
-    // Weight question is always authoritative — overwrite any weight captured from earlier answers
+    // Weight question is always authoritative - overwrite any weight captured from earlier answers
     const q9WeightMatch = text.match(/(?:under|less|below|max|up to)\s*([\d.]+)\s*(kg|grams?|g\b|lbs?|oz)/i);
     if (q9WeightMatch) {
       sessionSignals.weightTarget = `${q9WeightMatch[1]} ${q9WeightMatch[2]}`;
@@ -982,7 +982,7 @@ async function extractSignals(sessionSignals, questionId, answer) {
       : SIGNAL.ENOUGH;
     setFunctionalFeature(sessionSignals, "mechanicalStructure", classifyFeatureImportance(text) || "important");
     ensureFunctionalExamples(sessionSignals);
-    // Always overwrite — this is the dedicated question, earlier LLM guesses may be wrong
+    // Always overwrite - this is the dedicated question, earlier LLM guesses may be wrong
     sessionSignals.functionalExamples.mechanicalStructure = answer.slice(0, 120);
     // Infer assembly approach from housing description if not already captured
     if (!sessionSignals.assemblyApproach && /snap|screw|clip|weld|adhere|press.?fit/i.test(text)) {
@@ -1039,7 +1039,7 @@ async function extractSignals(sessionSignals, questionId, answer) {
 
   if (questionId === "q20_safety") {
     // Content-based detection: describing ANY specific risk means the user is aware of safety
-    // Using interpretBinary here is wrong — words like "non-toxic" contain "not" → UNKNOWN
+    // Using interpretBinary here is wrong - words like "non-toxic" contain "not" → UNKNOWN
     const hasRiskContent = /risk|hazard|danger|toxic|sharp|electric|skin|allergen|burn|cut|leak|chemical|poisonous|biohazard|radiation/i.test(text);
     const noRisksClaimed = /no risk|no hazard|no safety|none|safe product|completely safe/i.test(text);
     sessionSignals.safetyAwareness = (!noRisksClaimed && (hasRiskContent || answer.trim().length > 30))
@@ -1092,7 +1092,7 @@ async function extractSignals(sessionSignals, questionId, answer) {
     const modularImportance = /\bno\b|none|not replaceable|not.*replac/i.test(text) ? "optional" : "important";
     setFunctionalFeature(sessionSignals, "modularity", modularImportance);
     ensureFunctionalExamples(sessionSignals);
-    // Always overwrite — this is the dedicated question, earlier LLM guesses may be wrong
+    // Always overwrite - this is the dedicated question, earlier LLM guesses may be wrong
     sessionSignals.functionalExamples.modularity = answer.slice(0, 120);
   }
 
@@ -1108,14 +1108,14 @@ async function extractSignals(sessionSignals, questionId, answer) {
     const maintImportance = /\bno\b|none|no maintenance|maintenance.?free/i.test(text) ? "optional" : "important";
     setFunctionalFeature(sessionSignals, "maintenance", maintImportance);
     ensureFunctionalExamples(sessionSignals);
-    // Always set from the dedicated maintenance question — overrides any LLM guess from earlier answers
+    // Always set from the dedicated maintenance question - overrides any LLM guess from earlier answers
     sessionSignals.functionalExamples.maintenance = answer.slice(0, 120);
   }
 
   if (questionId === "q28_optional_features") {
     setFunctionalFeature(sessionSignals, "optionalEnhancements", "optional");
     ensureFunctionalExamples(sessionSignals);
-    // Always overwrite — this is the dedicated question, earlier LLM guesses may be wrong
+    // Always overwrite - this is the dedicated question, earlier LLM guesses may be wrong
     sessionSignals.functionalExamples.optionalEnhancements = answer.slice(0, 120);
   }
 

@@ -36,7 +36,7 @@ function hydrateManufacturingFromSignals(signals) {
   }
 
   if ((signals.costAwareness || signals.costEstimate) && !mfg.roughCost) {
-    // costEstimate means user stated actual figures — that earns a higher confidence than general awareness
+    // costEstimate means user stated actual figures - that earns a higher confidence than general awareness
     const costConf = signals.costEstimate ? 3 : 2;
     mfg.roughCost = { status: true, vendor: false, cost: false, confidence: costConf };
   }

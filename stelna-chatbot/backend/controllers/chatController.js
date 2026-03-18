@@ -39,7 +39,7 @@ async function chat(req, res) {
       return res.json(prcResult);
     }
 
-    // Block free-text after PRC is completed — show options instead
+    // Block free-text after PRC is completed - show options instead
     if (isPRCCompleted(session)) {
       return res.json({
         type: "prc_question",
