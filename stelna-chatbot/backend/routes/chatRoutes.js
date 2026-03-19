@@ -2,10 +2,31 @@ const express = require("express");
 const dns = require("dns");
 const { chat } = require("../controllers/chatController");
 const firebaseDb = require("../config/firebase");
+const { markPRCCompleted, getSessionKey } = require("../memory/sessionManager");
 
 const router = express.Router();
 
 router.post("/chat", chat);
+
+// TEST ENDPOINT: Mark a session as PRC completed (for UI testing)
+router.post("/test-mark-completed", (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ error: "sessionId required" });
+    }
+
+    const session = getSessionKey(sessionId);
+    markPRCCompleted(session);
+
+    res.json({
+      success: true,
+      message: `Session ${session} marked as PRC completed`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Check if email domain has MX records (mail servers exist)
 function checkMxRecord(domain) {

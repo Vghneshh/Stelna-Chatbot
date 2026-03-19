@@ -83,18 +83,19 @@ async function generateLLMResponse(messages) {
   const providers = [];
 
   // Build provider list based on available API keys
-  if (process.env.GROQ_API_KEY) {
-    providers.push({ name: "Groq", fn: generateWithGroq });
-  }
+  // OpenRouter (primary) -> Groq (fallback) -> OpenAI (fallback)
   if (process.env.OPENROUTER_API_KEY) {
     providers.push({ name: "OpenRouter", fn: generateWithOpenRouter });
+  }
+  if (process.env.GROQ_API_KEY) {
+    providers.push({ name: "Groq", fn: generateWithGroq });
   }
   if (process.env.OPENAI_API_KEY) {
     providers.push({ name: "OpenAI", fn: generateWithOpenAI });
   }
 
   if (providers.length === 0) {
-    throw new Error("No LLM provider configured. Add GROQ_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY to .env");
+    throw new Error("No LLM provider configured. Add OPENROUTER_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY to .env");
   }
 
   let lastError;
