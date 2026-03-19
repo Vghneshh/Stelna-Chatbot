@@ -10,9 +10,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    /* Base responsive setup */
+    /* Base responsive setup - scaled up for 80% iframe display */
     html {
-      font-size: 16px; /* Base font size */
+      font-size: 20px; /* Increased from 16px (16 * 1.25 = 20) */
       -webkit-text-size-adjust: 100%; /* Prevent iOS zoom */
       -ms-text-size-adjust: 100%; /* Prevent IE zoom */
     }
@@ -20,7 +20,7 @@
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 1rem;
+      padding: 1.25rem; /* Increased padding */
       line-height: 1.5;
       box-sizing: border-box;
       -webkit-font-smoothing: antialiased;
@@ -30,7 +30,7 @@
     /* Fix for iframe embedding */
     @media screen and (max-width: 1200px) {
       html {
-        font-size: 14px; /* Slightly smaller base for smaller screens */
+        font-size: 18px; /* Increased from 14px (14 * 1.25 ≈ 18) */
       }
     }
 
@@ -112,31 +112,31 @@
     }
 
     .welcome-container {
-      max-width: min(600px, 90vw);
+      max-width: min(750px, 90vw); /* Increased from 600px (600 * 1.25 = 750) */
       margin: 0 auto;
-      padding: 2rem 1.5rem;
+      padding: 2.5rem 1.875rem; /* Increased from 2rem 1.5rem (2*1.25=2.5, 1.5*1.25=1.875) */
       background: #f8f9fa;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 15px; /* Increased from 12px (12 * 1.25 = 15) */
+      box-shadow: 0 3px 13px rgba(0, 0, 0, 0.1); /* Slightly increased shadow */
     }
 
     .welcome-title {
-      font-size: clamp(1.75rem, 4vw, 2rem);
+      font-size: clamp(2.1875rem, 5vw, 2.5rem); /* Increased from clamp(1.75rem, 4vw, 2rem) by 1.25x */
       color: #333;
-      margin-bottom: 1rem;
+      margin-bottom: 1.25rem; /* Increased from 1rem */
       font-weight: 700;
     }
 
     .welcome-subtitle {
-      font-size: clamp(1rem, 2.5vw, 1.125rem);
+      font-size: clamp(1.25rem, 3.125vw, 1.40625rem); /* Increased from clamp(1rem, 2.5vw, 1.125rem) by 1.25x */
       color: #666;
-      margin-bottom: 2rem;
+      margin-bottom: 2.5rem; /* Increased from 2rem (2 * 1.25 = 2.5) */
       line-height: 1.4;
     }
 
     .welcome-buttons {
       display: flex;
-      gap: 20px;
+      gap: 25px; /* Increased from 20px (20 * 1.25 = 25) */
       justify-content: center;
       flex-wrap: wrap;
     }
@@ -442,25 +442,25 @@
       }
 
       .pie-container {
-        width: min(400px, 85vw) !important;
-        height: min(400px, 85vw) !important;
+        width: min(500px, 85vw) !important; /* Increased from 400px */
+        height: min(500px, 85vw) !important;
         margin: 0 auto 30px auto;
       }
 
       .pie-container canvas {
-        width: min(400px, 85vw) !important;
-        height: min(400px, 85vw) !important;
+        width: min(500px, 85vw) !important; /* Increased from 400px */
+        height: min(500px, 85vw) !important;
       }
 
       .bar-container {
-        width: min(500px, 90vw) !important;
-        height: min(200px, 40vw) !important;
+        width: min(625px, 90vw) !important; /* Increased from 500px (500 * 1.25 = 625) */
+        height: min(250px, 40vw) !important; /* Increased from 200px (200 * 1.25 = 250) */
         margin: 0 auto;
       }
 
       .bar-container canvas {
-        width: min(500px, 90vw) !important;
-        height: min(200px, 40vw) !important;
+        width: min(625px, 90vw) !important; /* Increased from 500px */
+        height: min(250px, 40vw) !important; /* Increased from 200px */
       }
 
       /* Tables come after charts */
@@ -663,18 +663,18 @@
 
     .popup-card {
       background: #fff;
-      padding: clamp(1.5rem, 4vw, 2.5rem) clamp(2rem, 5vw, 2.5rem);
-      border-radius: 10px;
-      max-width: 640px;
+      padding: clamp(1.875rem, 5vw, 3.125rem) clamp(2.5rem, 6vw, 3.125rem); /* Scaled up from original */
+      border-radius: 12px; /* Increased from 10px (10 * 1.25 = 12.5 ≈ 12) */
+      max-width: 800px; /* Increased from 640px (640 * 1.25 = 800) */
       width: 90%;
       text-align: center;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15); /* Slightly increased shadow */
       border: 1px solid #e5e7eb;
     }
 
     .popup-card h2 {
-      margin: 0 0 6px 0;
-      font-size: 20px;
+      margin: 0 0 8px 0; /* Increased from 6px */
+      font-size: 25px; /* Increased from 20px (20 * 1.25 = 25) */
       font-weight: 600;
       color: #1f2937;
       letter-spacing: -0.01em;
@@ -686,10 +686,10 @@
     }
 
     .popup-gif img {
-      width: 110px;
-      height: 110px;
+      width: 138px; /* Increased from 110px (110 * 1.25 = 137.5 ≈ 138) */
+      height: 138px;
       object-fit: cover;
-      border-radius: 6px;
+      border-radius: 8px; /* Increased from 6px (6 * 1.25 = 7.5 ≈ 8) */
     }
 
     .popup-description {
