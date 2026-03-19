@@ -255,7 +255,12 @@ function App() {
         className="prc-iframe"
       />
 
-      {/* ...existing code... */}
+      {/* Chat icon - only show when chat is closed and mode is selected */}
+      {modeSelected && !chatOpen && (
+        <button className="chat-icon" onClick={() => setChatOpen(true)}>
+          💬
+        </button>
+      )}
 
       {/* Floating chatbot panel */}
       {chatOpen && (
