@@ -33,6 +33,17 @@ function App() {
   const iframeRef = useRef(null);
   const typingRef = useRef(null);
 
+  // Notify iframe about chatbot state changes
+  const notifyChatbotState = (isOpen) => {
+    const iframe = iframeRef.current;
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({
+        type: "chatbot_state",
+        isOpen: isOpen
+      }, window.location.origin);
+    }
+  };
+
   // Send PRC data to iframe via postMessage
   const fillPrcLive = (data) => {
     const iframe = iframeRef.current;
@@ -52,6 +63,7 @@ function App() {
     if (modalTimeoutRef.current) clearTimeout(modalTimeoutRef.current);
     fillPrcLive(data);
     setChatOpen(false);
+    notifyChatbotState(false); // Notify iframe that chatbot is closed
     setShowModal(true);
     modalTimeoutRef.current = setTimeout(() => {
       setShowModal(false);
@@ -219,6 +231,7 @@ function App() {
       if (event.data && event.data.type === "open_chatbot") {
         setModeSelected(true);
         setChatOpen(true);
+        notifyChatbotState(true); // Notify iframe that chatbot is open
         // Start typing animation for welcome message
         setChat(prev => {
           if (prev.length === 0) {
@@ -257,7 +270,10 @@ function App() {
 
       {/* Chat icon - only show when chat is closed and mode is selected */}
       {modeSelected && !chatOpen && (
-        <button className="chat-icon" onClick={() => setChatOpen(true)}>
+        <button className="chat-icon" onClick={() => {
+          setChatOpen(true);
+          notifyChatbotState(true); // Notify iframe that chatbot is open
+        }}>
           💬
         </button>
       )}
@@ -269,7 +285,10 @@ function App() {
             <div className="header-left">
               <span className="title"><span className="title-brand">Stelna Bot</span></span>
             </div>
-            <button className="chat-close-btn" onClick={() => setChatOpen(false)}>✕</button>
+            <button className="chat-close-btn" onClick={() => {
+              setChatOpen(false);
+              notifyChatbotState(false); // Notify iframe that chatbot is closed
+            }}>✕</button>
           </div>
 
           <div className="chat-body">
