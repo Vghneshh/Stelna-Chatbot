@@ -26,7 +26,7 @@ body {
 
 .chat-icon {
   position: fixed;
-  bottom: 80px;
+  top: 120px; /* Aligned with chat panel */
   right: 24px;
   background: #2563eb;
   color: white;
@@ -53,9 +53,11 @@ body {
 .chat-panel {
   position: fixed;
   right: 20px;
-  bottom: 80px;
+  top: 120px; /* Positioned below header/Download button with ~20px spacing */
   width: 320px;
-  height: 440px;
+  height: calc(100vh - 160px); /* Responsive height: viewport - top - bottom margin */
+  max-height: 500px; /* Cap maximum height */
+  min-height: 350px; /* Minimum usable height */
   background: white;
   border-radius: 12px;
   display: flex;
@@ -617,14 +619,15 @@ body {
 @media (max-width: 480px) {
   .chat-panel {
     width: calc(100vw - 16px);
-    height: calc(100vh - 60px);
+    height: calc(100vh - 80px);
+    top: 60px;
     right: 8px;
-    bottom: 8px;
+    max-height: none;
     border-radius: 10px;
   }
 
   .chat-icon {
-    bottom: 12px;
+    top: 60px;
     right: 12px;
     width: 42px;
     height: 42px;
