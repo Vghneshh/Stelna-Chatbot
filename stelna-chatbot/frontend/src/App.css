@@ -54,13 +54,13 @@ body {
   position: fixed;
   right: 20px;
   bottom: 20px;
-  width: 380px;
-  height: 550px;
+  width: 320px; /* Reduced from 380px */
+  height: 480px; /* Reduced from 550px */
   background: white;
-  border-radius: 14px;
+  border-radius: 12px; /* Slightly reduced from 14px */
   display: flex;
   flex-direction: column;
-  box-shadow: 0px 8px 25px rgba(0,0,0,0.2);
+  box-shadow: 0px 6px 20px rgba(0,0,0,0.18); /* Slightly reduced shadow */
   z-index: 1000;
 }
 
@@ -69,10 +69,10 @@ body {
 .chat-header {
   background: #1f6feb;
   color: white;
-  padding: 12px 15px;
+  padding: 10px 12px; /* Reduced from 12px 15px */
   font-weight: bold;
-  border-top-left-radius: 14px;
-  border-top-right-radius: 14px;
+  border-top-left-radius: 12px; /* Updated to match panel radius */
+  border-top-right-radius: 12px; /* Updated to match panel radius */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -358,9 +358,9 @@ body {
 
 .welcome-greeting {
   text-align: left;
-  padding: 24px 20px 18px;
+  padding: 18px 16px 14px; /* Reduced from 24px 20px 18px */
   background: linear-gradient(135deg, rgba(91, 182, 255, 0.08), rgba(46, 91, 255, 0.06));
-  border-radius: 14px;
+  border-radius: 12px; /* Reduced from 14px */
   border: 1px solid rgba(46, 91, 255, 0.08);
 }
 
@@ -379,7 +379,7 @@ body {
 
 .greeting-gradient {
   font-family: 'Inter', 'Poppins', system-ui, sans-serif;
-  font-size: 32px;
+  font-size: 28px; /* Reduced from 32px */
   font-weight: 700;
   line-height: 1.2;
   margin: 0;
@@ -443,15 +443,15 @@ body {
 .welcome-options {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 8px; /* Reduced from 10px */
+  margin-top: 14px; /* Reduced from 18px */
   width: 100%;
   align-items: flex-start;
 }
 
 .welcome-options .menu-btn {
-  padding: 12px 20px;
-  border-radius: 28px;
+  padding: 10px 16px; /* Reduced from 12px 20px */
+  border-radius: 24px; /* Slightly reduced from 28px */
   font-size: 13px;
   font-weight: 500;
   width: auto;
