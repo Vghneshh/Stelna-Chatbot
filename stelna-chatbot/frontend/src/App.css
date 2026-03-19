@@ -52,15 +52,15 @@ body {
 
 .chat-panel {
   position: fixed;
-  right: 12px;
-  bottom: 12px;
-  width: 250px;
-  height: 340px;
+  right: 16px;
+  bottom: 16px;
+  width: 300px;
+  height: 420px;
   background: white;
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0px 3px 12px rgba(0,0,0,0.15);
+  box-shadow: 0px 4px 16px rgba(0,0,0,0.18);
   z-index: 1000;
 }
 
@@ -69,10 +69,10 @@ body {
 .chat-header {
   background: #1f6feb;
   color: white;
-  padding: 6px 8px;
+  padding: 10px 12px;
   font-weight: bold;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -101,7 +101,7 @@ body {
 .title-brand {
   font-family: 'Poppins', 'Inter', system-ui, sans-serif;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.3px;
   margin-right: 2px;
   background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
@@ -136,7 +136,7 @@ body {
 
 .chat-body {
   flex: 1;
-  padding: 6px;
+  padding: 10px;
   overflow-y: auto;
   overflow-x: hidden;
   background: #f9fafb;
@@ -162,15 +162,15 @@ body {
 
 .msg {
   width: fit-content;
-  padding: 7px 12px;
-  border-radius: 12px;
-  margin-bottom: 6px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  margin-bottom: 8px;
   word-wrap: break-word;
   overflow-wrap: break-word;
   word-break: break-word;
   font-family: 'Poppins', sans-serif;
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 13px;
+  line-height: 1.45;
   display: block;
 }
 
@@ -258,17 +258,17 @@ body {
 
 .chat-input {
   display: flex;
-  padding: 6px;
+  padding: 10px;
   border-top: 1px solid #ddd;
 }
 
 .chat-input input {
   flex: 1;
-  padding: 5px 7px;
-  border-radius: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
   border: 1px solid #ccc;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 13px;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -279,14 +279,14 @@ body {
 }
 
 .chat-input button {
-  margin-left: 5px;
-  padding: 5px 8px;
+  margin-left: 8px;
+  padding: 8px 14px;
   background: #1f6feb;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .chat-input button:hover {
@@ -309,18 +309,18 @@ body {
 .menu-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .menu-btn {
-  padding: 5px 8px;
-  border-radius: 12px;
+  padding: 6px 10px;
+  border-radius: 14px;
   border: 1.5px solid #1f6feb;
   background: white;
   color: #1f6feb;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -358,9 +358,9 @@ body {
 
 .welcome-greeting {
   text-align: left;
-  padding: 10px 8px 8px;
+  padding: 14px 12px 12px;
   background: linear-gradient(135deg, rgba(91, 182, 255, 0.08), rgba(46, 91, 255, 0.06));
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid rgba(46, 91, 255, 0.08);
 }
 
@@ -379,7 +379,7 @@ body {
 
 .greeting-gradient {
   font-family: 'Inter', 'Poppins', system-ui, sans-serif;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.2;
   margin: 0;
@@ -391,10 +391,10 @@ body {
 }
 
 .greeting-subtitle {
-  font-size: 11px;
+  font-size: 13px;
   color: #555;
-  line-height: 1.4;
-  margin: 3px 0 0;
+  line-height: 1.5;
+  margin: 6px 0 0;
   font-weight: 400;
   white-space: pre-line;
 }
@@ -406,7 +406,7 @@ body {
   animation: cursorBlink 1s ease-in-out infinite;
   vertical-align: baseline;
   margin-left: 2px;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
   color: #2E5BFF;
 }
@@ -443,20 +443,20 @@ body {
 .welcome-options {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-top: 8px;
+  gap: 8px;
+  margin-top: 12px;
   width: 100%;
   align-items: flex-start;
 }
 
 .welcome-options .menu-btn {
-  padding: 6px 10px;
-  border-radius: 16px;
-  font-size: 10px;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 12px;
   font-weight: 500;
   width: auto;
   text-align: center;
-  box-shadow: 0 2px 6px rgba(46, 91, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(46, 91, 255, 0.15);
   background: white;
   color: #2E5BFF;
   border: 1.5px solid #2E5BFF;
