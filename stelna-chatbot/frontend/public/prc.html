@@ -13,6 +13,8 @@
     /* Base responsive setup */
     html {
       font-size: 16px; /* Base font size */
+      -webkit-text-size-adjust: 100%; /* Prevent iOS zoom */
+      -ms-text-size-adjust: 100%; /* Prevent IE zoom */
     }
 
     body {
@@ -21,6 +23,15 @@
       padding: 1rem;
       line-height: 1.5;
       box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Fix for iframe embedding */
+    @media screen and (max-width: 1200px) {
+      html {
+        font-size: 14px; /* Slightly smaller base for smaller screens */
+      }
     }
 
     *, *::before, *::after {
@@ -431,25 +442,25 @@
       }
 
       .pie-container {
-        width: 400px !important;
-        height: 400px !important;
+        width: min(400px, 85vw) !important;
+        height: min(400px, 85vw) !important;
         margin: 0 auto 30px auto;
       }
 
       .pie-container canvas {
-        width: 400px !important;
-        height: 400px !important;
+        width: min(400px, 85vw) !important;
+        height: min(400px, 85vw) !important;
       }
 
       .bar-container {
-        width: 500px !important;
-        height: 200px !important;
+        width: min(500px, 90vw) !important;
+        height: min(200px, 40vw) !important;
         margin: 0 auto;
       }
 
       .bar-container canvas {
-        width: 500px !important;
-        height: 200px !important;
+        width: min(500px, 90vw) !important;
+        height: min(200px, 40vw) !important;
       }
 
       /* Tables come after charts */
@@ -652,7 +663,7 @@
 
     .popup-card {
       background: #fff;
-      padding: 36px 40px;
+      padding: clamp(1.5rem, 4vw, 2.5rem) clamp(2rem, 5vw, 2.5rem);
       border-radius: 10px;
       max-width: 640px;
       width: 90%;
