@@ -696,8 +696,8 @@
 
     .mode-card {
       flex: 1;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-rows: auto 4.2em auto auto; /* h3, p, gif, button - fixed p height */
       border: 1px solid #e5e7eb;
       border-radius: 8px;
       padding: 22px 20px;
@@ -721,9 +721,6 @@
       color: #6b7280;
       margin: 0 0 18px 0;
       line-height: 1.55;
-      height: 4.2em; /* Fixed height to ensure perfect GIF alignment */
-      display: flex;
-      align-items: flex-start;
     }
 
     .manual-btn,
@@ -738,7 +735,6 @@
       font-weight: 500;
       font-family: inherit;
       transition: background 0.15s ease, border-color 0.15s ease;
-      margin-top: auto; /* Push buttons to bottom for perfect alignment */
     }
 
     .manual-btn {
