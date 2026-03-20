@@ -37,12 +37,32 @@ function App() {
 
   // Handle expanding collapsed chatbot
   const expandChatbot = () => {
+    console.log('Expanding chatbot - before:', { isCollapsed, chatOpen }); // Debug log
     setIsCollapsed(false);
     if (!chatOpen) {
       setChatOpen(true);
       notifyChatbotState(true);
     }
+    console.log('Expanding chatbot - after setting states'); // Debug log
   };
+
+  // Debug helper - you can call this from browser console: window.debugChatbot()
+  useEffect(() => {
+    window.debugChatbot = () => {
+      console.log('=== CHATBOT DEBUG INFO ===');
+      console.log('chatOpen:', chatOpen);
+      console.log('isCollapsed:', isCollapsed);
+      console.log('modeSelected:', modeSelected);
+      console.log('Current scroll position:', window.scrollY);
+      console.log('Scroll threshold: 135px');
+      console.log('========================');
+    };
+
+    // Cleanup
+    return () => {
+      delete window.debugChatbot;
+    };
+  }, [chatOpen, isCollapsed, modeSelected]);
 
   // Notify iframe about chatbot state changes
   const notifyChatbotState = (isOpen) => {
@@ -238,9 +258,14 @@ function App() {
         const scrollY = window.scrollY;
         const threshold = 135; // 135px scroll threshold
 
-        if (scrollY > threshold && !isCollapsed && chatOpen) {
+        // Only collapse if chatbot is currently open (not already collapsed)
+        if (scrollY > threshold && chatOpen && !isCollapsed) {
+          console.log('Collapsing chatbot at scroll:', scrollY); // Debug log
           setIsCollapsed(true);
-        } else if (scrollY <= threshold && isCollapsed) {
+        }
+        // Auto-expand when scrolling back up (optional - you can remove this)
+        else if (scrollY <= threshold && chatOpen && isCollapsed) {
+          console.log('Auto-expanding chatbot at scroll:', scrollY); // Debug log
           setIsCollapsed(false);
         }
 
@@ -248,7 +273,9 @@ function App() {
       }, 16); // ~60fps throttling
     };
 
+    // Always listen for scroll when mode is selected, regardless of chat state
     if (modeSelected) {
+      console.log('Adding scroll listener'); // Debug log
       window.addEventListener('scroll', handleScroll, { passive: true });
     }
 
@@ -258,7 +285,7 @@ function App() {
         clearTimeout(scrollTimeoutRef.current);
       }
     };
-  }, [chatOpen, isCollapsed, modeSelected]);
+  }, [chatOpen, isCollapsed, modeSelected]); // Dependencies ensure re-binding when states change
 
   // Start typing when welcome message is added
   useEffect(() => {
@@ -310,14 +337,22 @@ function App() {
         className="prc-iframe"
       />
 
-      {/* Chat icon - show when chat is closed OR when collapsed */}
-      {modeSelected && (!chatOpen || (chatOpen && isCollapsed)) && (
+      {/* Single Chat Icon - appears when chat is closed OR when chat is collapsed due to scroll */}
+      {modeSelected && (!chatOpen || isCollapsed) && (
         <button
           className={`chat-icon ${isCollapsed ? 'from-collapsed' : ''}`}
           onClick={() => {
+            console.log('Chat icon clicked, isCollapsed:', isCollapsed, 'chatOpen:', chatOpen); // Debug log
             if (isCollapsed) {
-              expandChatbot();
-            } else {
+              // Expand from collapsed state
+              setIsCollapsed(false);
+            } else if (!chatOpen) {
+              // Open chat from closed state
+              setChatOpen(true);
+              notifyChatbotState(true);
+            }
+            // If somehow both chatOpen and !isCollapsed, just open it
+            if (!chatOpen) {
               setChatOpen(true);
               notifyChatbotState(true);
             }
@@ -327,7 +362,7 @@ function App() {
         </button>
       )}
 
-      {/* Floating chatbot panel */}
+      {/* Floating chatbot panel - always render when chatOpen=true, but apply collapsed state via CSS */}
       {chatOpen && (
         <div className={`chat-panel ${isCollapsed ? 'collapsed' : 'open'}`}>
           <div className="chat-header">
@@ -335,6 +370,7 @@ function App() {
               <span className="title"><span className="title-brand">Stelna Bot</span></span>
             </div>
             <button className="chat-close-btn" onClick={() => {
+              console.log('Closing chat via X button'); // Debug log
               setChatOpen(false);
               setIsCollapsed(false); // Reset collapse state when closing
               notifyChatbotState(false);
