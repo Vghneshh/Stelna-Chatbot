@@ -37,15 +37,41 @@ body {
   font-size: 20px;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  z-index: 1000;
+  z-index: 1001; /* Above chat panel when collapsed */
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Smooth transitions */
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transform: scale(1);
+  opacity: 1;
 }
 
+/* Enhanced hover effect */
 .chat-icon:hover {
   background: #1d4ed8;
-  transform: scale(1.05);
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+}
+
+/* Icon when appearing from collapsed state */
+.chat-icon.from-collapsed {
+  animation: expandFromCollapsed 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Smooth expand animation for collapsed chat icon */
+@keyframes expandFromCollapsed {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* ================= FLOATING CHAT PANEL ================= */
@@ -64,6 +90,23 @@ body {
   flex-direction: column;
   box-shadow: 0px 6px 20px rgba(0,0,0,0.18);
   z-index: 1000;
+  /* Smooth transitions for collapse/expand */
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transform-origin: bottom right;
+}
+
+/* Collapsed state - smooth scale down and fade */
+.chat-panel.collapsed {
+  transform: scale(0) translateY(100%);
+  opacity: 0;
+  pointer-events: none; /* Disable interactions when collapsed */
+}
+
+/* Open state - ensure full visibility */
+.chat-panel.open {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* ================= HEADER ================= */
@@ -624,6 +667,21 @@ body {
     right: 8px;
     max-height: none;
     border-radius: 10px;
+    /* Maintain smooth transitions on mobile */
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  /* Mobile collapsed state - slide down instead of scale for better mobile UX */
+  .chat-panel.collapsed {
+    transform: translateY(calc(100% + 20px)) scale(0.95);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .chat-panel.open {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .chat-icon {
@@ -632,6 +690,8 @@ body {
     width: 42px;
     height: 42px;
     font-size: 18px;
+    /* Maintain smooth mobile transitions */
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
   }
 
   .greeting-gradient {

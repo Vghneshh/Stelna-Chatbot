@@ -28,10 +28,21 @@ function App() {
   const [typingText, setTypingText] = useState("");
   const [typingDone, setTypingDone] = useState(false);
   const [assessmentStarted, setAssessmentStarted] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false); // New state for scroll collapse
   const bottomRef = useRef(null);
   const modalTimeoutRef = useRef(null);
   const iframeRef = useRef(null);
   const typingRef = useRef(null);
+  const scrollTimeoutRef = useRef(null); // For throttling scroll events
+
+  // Handle expanding collapsed chatbot
+  const expandChatbot = () => {
+    setIsCollapsed(false);
+    if (!chatOpen) {
+      setChatOpen(true);
+      notifyChatbotState(true);
+    }
+  };
 
   // Notify iframe about chatbot state changes
   const notifyChatbotState = (isOpen) => {
@@ -218,6 +229,37 @@ function App() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat, loading, typingText]);
 
+  // Throttled scroll handler for chatbot collapse/expand
+  useEffect(() => {
+    const handleScroll = () => {
+      if (scrollTimeoutRef.current) return; // Throttle scroll events
+
+      scrollTimeoutRef.current = setTimeout(() => {
+        const scrollY = window.scrollY;
+        const threshold = 135; // 135px scroll threshold
+
+        if (scrollY > threshold && !isCollapsed && chatOpen) {
+          setIsCollapsed(true);
+        } else if (scrollY <= threshold && isCollapsed) {
+          setIsCollapsed(false);
+        }
+
+        scrollTimeoutRef.current = null;
+      }, 16); // ~60fps throttling
+    };
+
+    if (modeSelected) {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    }
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [chatOpen, isCollapsed, modeSelected]);
+
   // Start typing when welcome message is added
   useEffect(() => {
     if (chat.length === 1 && chat[0].text === "__typing__" && !typingRef.current) {
@@ -268,26 +310,34 @@ function App() {
         className="prc-iframe"
       />
 
-      {/* Chat icon - only show when chat is closed and mode is selected */}
-      {modeSelected && !chatOpen && (
-        <button className="chat-icon" onClick={() => {
-          setChatOpen(true);
-          notifyChatbotState(true); // Notify iframe that chatbot is open
-        }}>
+      {/* Chat icon - show when chat is closed OR when collapsed */}
+      {modeSelected && (!chatOpen || (chatOpen && isCollapsed)) && (
+        <button
+          className={`chat-icon ${isCollapsed ? 'from-collapsed' : ''}`}
+          onClick={() => {
+            if (isCollapsed) {
+              expandChatbot();
+            } else {
+              setChatOpen(true);
+              notifyChatbotState(true);
+            }
+          }}
+        >
           💬
         </button>
       )}
 
       {/* Floating chatbot panel */}
       {chatOpen && (
-        <div className="chat-panel">
+        <div className={`chat-panel ${isCollapsed ? 'collapsed' : 'open'}`}>
           <div className="chat-header">
             <div className="header-left">
               <span className="title"><span className="title-brand">Stelna Bot</span></span>
             </div>
             <button className="chat-close-btn" onClick={() => {
               setChatOpen(false);
-              notifyChatbotState(false); // Notify iframe that chatbot is closed
+              setIsCollapsed(false); // Reset collapse state when closing
+              notifyChatbotState(false);
             }}>✕</button>
           </div>
 
