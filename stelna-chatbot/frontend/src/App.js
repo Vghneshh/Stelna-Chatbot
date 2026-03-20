@@ -318,6 +318,17 @@ function App() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
+  // Notify iframe about initial chatbot state when it opens
+  useEffect(() => {
+    if (chatOpen) {
+      // Small delay to ensure iframe is loaded
+      setTimeout(() => {
+        notifyChatbotState(true);
+        console.log('Notified iframe: chatbot is open');
+      }, 100);
+    }
+  }, [chatOpen]);
+
   // ...existing code...
 
   return (
