@@ -43,7 +43,9 @@ function App() {
       console.log('isCollapsed:', isCollapsed);
       console.log('modeSelected:', modeSelected);
       console.log('Current scroll position:', window.scrollY);
-      console.log('Scroll threshold: 135px');
+      console.log('Scroll threshold: 150px'); // Updated threshold
+      console.log('Should collapse:', window.scrollY > 150 && chatOpen && !isCollapsed);
+      console.log('Should expand:', window.scrollY <= 150 && chatOpen && isCollapsed);
       console.log('========================');
     };
 
@@ -245,18 +247,28 @@ function App() {
 
       scrollTimeoutRef.current = setTimeout(() => {
         const scrollY = window.scrollY;
-        const threshold = 135; // 135px scroll threshold
+        const threshold = 150; // Updated to 150px as requested
+
+        console.log('Scroll detected:', {
+          scrollY,
+          threshold,
+          chatOpen,
+          isCollapsed,
+          modeSelected,
+          shouldCollapse: scrollY > threshold && chatOpen && !isCollapsed,
+          shouldExpand: scrollY <= threshold && chatOpen && isCollapsed
+        });
 
         // Only collapse if chatbot is currently open (not already collapsed)
         if (scrollY > threshold && chatOpen && !isCollapsed) {
-          console.log('Collapsing chatbot at scroll:', scrollY); // Debug log
+          console.log('✅ COLLAPSING chatbot at scroll:', scrollY);
           setIsCollapsed(true);
           // Notify PRC iframe that chatbot is collapsed (so PRC AI assistant can show)
           notifyChatbotState(false);
         }
-        // Auto-expand when scrolling back up (optional - you can remove this)
+        // Auto-expand when scrolling back up
         else if (scrollY <= threshold && chatOpen && isCollapsed) {
-          console.log('Auto-expanding chatbot at scroll:', scrollY); // Debug log
+          console.log('✅ EXPANDING chatbot at scroll:', scrollY);
           setIsCollapsed(false);
           // Notify PRC iframe that chatbot is open again (so PRC AI assistant hides)
           notifyChatbotState(true);
@@ -266,13 +278,16 @@ function App() {
       }, 16); // ~60fps throttling
     };
 
-    // Always listen for scroll when mode is selected, regardless of chat state
-    if (modeSelected) {
-      console.log('Adding scroll listener'); // Debug log
+    // Listen for scroll when chatbot is open, regardless of modeSelected
+    if (chatOpen) {
+      console.log('🎯 Adding scroll listener - chatbot is open');
       window.addEventListener('scroll', handleScroll, { passive: true });
+    } else {
+      console.log('❌ Not adding scroll listener - chatbot is closed');
     }
 
     return () => {
+      console.log('🧹 Removing scroll listener');
       window.removeEventListener('scroll', handleScroll);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
@@ -321,13 +336,21 @@ function App() {
   // Notify iframe about initial chatbot state when it opens
   useEffect(() => {
     if (chatOpen) {
+      console.log('🚀 Chatbot OPENED - initial state notification');
       // Small delay to ensure iframe is loaded
       setTimeout(() => {
         notifyChatbotState(true);
-        console.log('Notified iframe: chatbot is open');
+        console.log('📨 Notified iframe: chatbot is open');
       }, 100);
+    } else {
+      console.log('❌ Chatbot CLOSED');
     }
   }, [chatOpen]);
+
+  // Test scroll detection immediately when component mounts
+  useEffect(() => {
+    console.log('🔄 Component mounted, testing scroll position:', window.scrollY);
+  }, []);
 
   // ...existing code...
 
