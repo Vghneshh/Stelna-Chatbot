@@ -22,58 +22,6 @@ body {
   border: none;
 }
 
-/* ================= FLOATING CHAT ICON ================= */
-
-.chat-icon {
-  position: fixed;
-  top: 120px; /* Aligned with chat panel */
-  right: 24px;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  font-size: 20px;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  z-index: 1001; /* Above chat panel when collapsed */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Smooth transitions */
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-  transform: scale(1);
-  opacity: 1;
-}
-
-/* Enhanced hover effect */
-.chat-icon:hover {
-  background: #1d4ed8;
-  transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
-}
-
-/* Icon when appearing from collapsed state */
-.chat-icon.from-collapsed {
-  animation: expandFromCollapsed 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-}
-
-/* Smooth expand animation for collapsed chat icon */
-@keyframes expandFromCollapsed {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.2);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
 /* ================= FLOATING CHAT PANEL ================= */
 
 .chat-panel {
@@ -690,16 +638,6 @@ body {
     transform: translateY(0) scale(1);
     opacity: 1;
     pointer-events: auto;
-  }
-
-  .chat-icon {
-    top: 60px;
-    right: 12px;
-    width: 42px;
-    height: 42px;
-    font-size: 18px;
-    /* Maintain smooth mobile transitions */
-    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
   }
 
   .greeting-gradient {

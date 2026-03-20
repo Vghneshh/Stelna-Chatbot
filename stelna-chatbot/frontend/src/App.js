@@ -35,17 +35,6 @@ function App() {
   const typingRef = useRef(null);
   const scrollTimeoutRef = useRef(null); // For throttling scroll events
 
-  // Handle expanding collapsed chatbot
-  const expandChatbot = () => {
-    console.log('Expanding chatbot - before:', { isCollapsed, chatOpen }); // Debug log
-    setIsCollapsed(false);
-    if (!chatOpen) {
-      setChatOpen(true);
-      notifyChatbotState(true);
-    }
-    console.log('Expanding chatbot - after setting states'); // Debug log
-  };
-
   // Debug helper - you can call this from browser console: window.debugChatbot()
   useEffect(() => {
     window.debugChatbot = () => {
@@ -262,11 +251,15 @@ function App() {
         if (scrollY > threshold && chatOpen && !isCollapsed) {
           console.log('Collapsing chatbot at scroll:', scrollY); // Debug log
           setIsCollapsed(true);
+          // Notify PRC iframe that chatbot is collapsed (so PRC AI assistant can show)
+          notifyChatbotState(false);
         }
         // Auto-expand when scrolling back up (optional - you can remove this)
         else if (scrollY <= threshold && chatOpen && isCollapsed) {
           console.log('Auto-expanding chatbot at scroll:', scrollY); // Debug log
           setIsCollapsed(false);
+          // Notify PRC iframe that chatbot is open again (so PRC AI assistant hides)
+          notifyChatbotState(true);
         }
 
         scrollTimeoutRef.current = null;
@@ -336,31 +329,6 @@ function App() {
         title="Product Readiness Checklist"
         className="prc-iframe"
       />
-
-      {/* Single Chat Icon - appears when chat is closed OR when chat is collapsed due to scroll */}
-      {modeSelected && (!chatOpen || isCollapsed) && (
-        <button
-          className={`chat-icon ${isCollapsed ? 'from-collapsed' : ''}`}
-          onClick={() => {
-            console.log('Chat icon clicked, isCollapsed:', isCollapsed, 'chatOpen:', chatOpen); // Debug log
-            if (isCollapsed) {
-              // Expand from collapsed state
-              setIsCollapsed(false);
-            } else if (!chatOpen) {
-              // Open chat from closed state
-              setChatOpen(true);
-              notifyChatbotState(true);
-            }
-            // If somehow both chatOpen and !isCollapsed, just open it
-            if (!chatOpen) {
-              setChatOpen(true);
-              notifyChatbotState(true);
-            }
-          }}
-        >
-          💬
-        </button>
-      )}
 
       {/* Floating chatbot panel - always render when chatOpen=true, but apply collapsed state via CSS */}
       {chatOpen && (
