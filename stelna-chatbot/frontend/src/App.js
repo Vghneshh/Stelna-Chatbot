@@ -130,7 +130,7 @@ function App() {
 
     // For all other options, send to backend
     try {
-      const res = await axios.post("https://stelnaassist.onrender.com/chat", {
+      const res = await axios.post("https://stelna-chatbot-7n17.onrender.com/chat", {
         message: option,
         sessionId: sessionId
       });
@@ -175,7 +175,7 @@ function App() {
     setLoading(true);
 
     try {
-      const res = await axios.post("https://stelnaassist.onrender.com/chat", {
+      const res = await axios.post("https://stelna-chatbot-7n17.onrender.com/chat", {
         message: userMessage,
         sessionId: sessionId
       });

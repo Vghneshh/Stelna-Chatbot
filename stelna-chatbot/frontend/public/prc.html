@@ -1290,7 +1290,7 @@ const isInIframe = window.self !== window.top;
     }
 
     // Save to Firebase via backend
-    fetch("http://localhost:5000/user-details", {
+    fetch("https://stelna-chatbot-7n17.onrender.com/user-details", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
