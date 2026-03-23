@@ -54,19 +54,43 @@ router.post("/user-details", async (req, res) => {
       }
     }
 
+    console.log("💾 Attempting to save user to Firebase:", { fullName, email: email.trim().toLowerCase() });
+
     // Save to Firebase Realtime Database
     const usersRef = firebaseDb.ref("users");
     const newUserRef = usersRef.push();
-    await newUserRef.set({
+
+    const userData = {
       fullName: fullName.trim(),
       email: email.trim().toLowerCase(),
       createdAt: new Date().toISOString()
-    });
+    };
+
+    await newUserRef.set(userData);
+
+    console.log("✅ User saved successfully to Firebase with ID:", newUserRef.key);
 
     res.status(201).json({ success: true, userId: newUserRef.key });
   } catch (err) {
-    console.error("Error saving user details:", err.message);
-    res.status(500).json({ error: "Failed to save user details." });
+    console.error("❌ Error saving user details to Firebase:");
+    console.error("- Error message:", err.message);
+    console.error("- Error code:", err.code);
+    console.error("- Full error:", err);
+
+    // Provide more specific error messages
+    let errorMessage = "Failed to save user details.";
+    if (err.message.includes("permission")) {
+      errorMessage = "Database permission denied. Please check Firebase security rules.";
+    } else if (err.message.includes("network")) {
+      errorMessage = "Network error connecting to Firebase. Please try again.";
+    } else if (err.message.includes("auth")) {
+      errorMessage = "Firebase authentication failed. Please check service account credentials.";
+    }
+
+    res.status(500).json({
+      error: errorMessage,
+      details: err.message // Include technical details for debugging
+    });
   }
 });
 
